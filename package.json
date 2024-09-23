@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node ./dist/index.js",
     "build": "tsc -p .",
-    "build:live": "nodemon --watch src/**/*.ts --exec ts-node ./src/index.ts"
+    "build:live": "nodemon --watch ./src/**/*.ts --exec ts-node ./src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "@discordjs/voice": "^0.17.0",
     "@types/node": "^22.5.5",
     "discord.js": "^14.16.2",
+    "dotenv": "^16.4.5",
     "nodemon": "^3.1.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2"

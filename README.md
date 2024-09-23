@@ -8,7 +8,7 @@ Running on Node.js (in TypeScript)
 ## 実行方法
 
 1. `.env.example` を参考に `.env` を作成
-    > PaaS環境の場合は `.env.example` を参考に環境変数を設定
+    > PaaS 環境の場合は `.env.example` を参考に環境変数を設定
 2. 以下コマンドを実行
 
     ```
@@ -47,10 +47,11 @@ $ npm -v
     > [discord.js - Guide](https://discordjs.guide/)
 -   @discordjs/voice
     > `discord.js` 音声操作用ライブラリ
+-   dotenv
+    > 環境変数参照用ライブラリ（ローカル⇔本番の環境差異吸収）
 
 ### トラブルシューティング
 
 ---
 
 ## TODO
-
