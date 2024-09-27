@@ -47,8 +47,12 @@ $ npm -v
     > [discord.js - Guide](https://discordjs.guide/)
 -   @discordjs/voice
     > `discord.js` 音声操作用ライブラリ
+-   spotify-web-api-node
+    > Spotify Web API 実行用ライブラリ
+-   @types/spotify-web-api-node
+    > spotify-web-api-node 用 TypeScript インテリセンス
 -   dotenv
-    > 環境変数参照用ライブラリ（ローカル⇔本番の環境差異吸収）
+    > 環境変数参照用ライブラリ（ローカル ⇔ 本番の環境差異吸収）
 
 ### トラブルシューティング
 
