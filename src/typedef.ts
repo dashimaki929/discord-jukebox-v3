@@ -1,5 +1,5 @@
 import { CommandInteraction, ButtonInteraction, ModalSubmitInteraction } from 'discord.js';
-import { Bot } from './class/Bot';
+import { Bot } from './class/Bot.js';
 
 export type Bots = {
     [key: string]: Bot;

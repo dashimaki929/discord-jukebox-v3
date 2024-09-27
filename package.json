@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "Discord Jukebox BOT🤖.  \r Running on Node.js (in TypeScript)",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node ./dist/index.js",
     "build": "tsc -p .",
-    "build:live": "nodemon --watch ./src/**/*.ts --exec ts-node ./src/index.ts"
+    "live": "nodemon --watch ./src/**/*.ts --exec npx tsx ./src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -25,10 +26,12 @@
   "dependencies": {
     "@discordjs/voice": "^0.17.0",
     "@types/node": "^22.5.5",
+    "@types/spotify-web-api-node": "^5.0.11",
     "discord.js": "^14.16.2",
     "dotenv": "^16.4.5",
     "nodemon": "^3.1.7",
-    "ts-node": "^10.9.2",
+    "spotify-web-api-node": "^5.0.2",
+    "tsx": "^4.19.1",
     "typescript": "^5.6.2"
   }
 }

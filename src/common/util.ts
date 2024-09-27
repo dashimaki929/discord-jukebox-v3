@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import { ButtonInteraction, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
 
-import { Commands, Command, BotSetting } from '../typedef';
-import { Bot } from '../class/Bot';
-import { MESSAGE_DELETE_TIMEOUT_MS } from './constants';
+import { Commands, Command, BotSetting } from '../typedef.js';
+import { Bot } from '../class/Bot.js';
+import { MESSAGE_DELETE_TIMEOUT_MS } from './constants.js';
 
 /**
  * Read file as text

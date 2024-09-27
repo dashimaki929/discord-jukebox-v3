@@ -3,10 +3,10 @@ dotenv.config();
 
 import { Client, GatewayIntentBits } from 'discord.js';
 
-import { commands } from './commands';
-import { Bots, BotSetting } from './typedef';
-import { Bot } from './class/Bot';
-import { registSlashCommands } from './common/util';
+import { commands } from './commands.js';
+import { Bots, BotSetting } from './typedef.js';
+import { Bot } from './class/Bot.js';
+import { registSlashCommands } from './common/util.js';
 
 const settings: BotSetting = { id: process.env.DISCORD_BOT_ID || '', token: process.env.DISCORD_BOT_TOKEN || '' };
 const bots: Bots = {};

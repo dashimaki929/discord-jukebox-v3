@@ -1,12 +1,13 @@
-import { AudioPlayer, AudioResource, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
-import { DEFAULT_VOLUME } from "../common/constants";
 import { InteractionResponse, Message } from "discord.js";
+import { AudioPlayer, AudioResource, createAudioPlayer, NoSubscriberBehavior } from "@discordjs/voice";
+import { DEFAULT_VOLUME } from "../common/constants.js";
+import SpotifyWebApi from "spotify-web-api-node";
 
 export class Bot {
     static connectedGuildCount: number = 0;
 
-    messages: Map<string, Message | InteractionResponse>;
-
+    spotifyApi: SpotifyWebApi;
+    
     player: AudioPlayer;
     playlist: string[];
     musicQueue: string[];
@@ -14,22 +15,30 @@ export class Bot {
     audioResource: AudioResource | null;
     isPlaying: boolean;
     isShuffle: boolean;
-
+    
+    messages: Map<string, Message | InteractionResponse>;
+    
     constructor(playlist: string[] = []) {
-        this.messages = new Map();
-
+        this.spotifyApi = new SpotifyWebApi({
+            clientId: process.env.SPOTIFY_CLIENT_ID,
+            clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+            redirectUri: process.env.SPOTIFY_REDIRECT_URL
+        });
+        
         this.player = createAudioPlayer({
             behaviors: {
                 noSubscriber: NoSubscriberBehavior.Pause,
             }
         });
-
+        
         this.playlist = playlist.filter(Boolean);
         this.musicQueue = [];
         this.volume = DEFAULT_VOLUME;
         this.audioResource = null;
         this.isPlaying = false;
         this.isShuffle = false;
+        
+        this.messages = new Map();
 
         this.initMusicQueue();
 

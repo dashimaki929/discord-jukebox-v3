@@ -36,7 +36,7 @@ $ npm -v
 -   typescript
 -   @types/node@22
     > `TypeScript v22` 用インテリセンス
--   ts-node
+-   tsx
     > TypeScript を即時コンパイル、実行する
 -   nodemon
     > ファイルの変更監視、変更時に `ts-node` を再起動する
