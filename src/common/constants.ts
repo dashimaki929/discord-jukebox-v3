@@ -8,3 +8,4 @@ export const ICONS = {
 export const URLS = {
     YOUTUBE: 'https://www.youtube.com/watch',
 }
+export const INTERLUDES = ['EtqP2xVE4iY', 'WtRHih2nZxk', 'slt_Bav8nsQ', 'DkUIxAzxF6k', 'Cwj910TeKRQ'];

@@ -215,7 +215,7 @@ export const commands: Commands = {
                     msg.delete();
                 }, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS));
             }).catch(error => {
-                console.error('APIの実行に失敗しました: ', error);
+                console.error('APIの実行に失敗しました:', error);
             });
         }
     },
