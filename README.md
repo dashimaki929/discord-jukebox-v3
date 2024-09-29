@@ -54,6 +54,8 @@ $ npm -v
 -   tsx
 -   tweetnacl
 -   typescript
+-   yt-search
+    > Youtube 動画検索, プレイリスト取得用ライブラリ
 
 ### トラブルシューティング
 

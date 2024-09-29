@@ -15,12 +15,13 @@ import {
     ButtonStyle,
     TextInputStyle,
 } from 'discord.js';
+import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
+import yts from 'yt-search';
 
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
 import { deleteMessageFromKey, notificationReply, shuffle } from './common/util.js';
-import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
-import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS } from './common/constants.js';
+import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
     debug: {
@@ -99,6 +100,99 @@ export const commands: Commands = {
             }
         }
     },
+    play: {
+        description: '🎵 Youtube から動画を指定して音楽を再生',
+        options: [
+            new SlashCommandStringOption()
+                .setName('play')
+                .setDescription('動画のURLを入力')
+                .setRequired(true)
+        ],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const url = interaction.options.get('play')?.value! as string;
+            const hash = url.match(/[\w-]{11}/);
+            if (!hash) {
+                notificationReply(interaction, ':warning: 動画のURLが正しくありません。');
+                return;
+            }
+
+            bot.musicQueue.unshift(hash[0]);
+            bot.download(bot.musicQueue[0]);
+
+            interaction.reply(['🎵 楽曲をキューに追加しました。', `${URLS.YOUTUBE}?v=${hash}`].join('\n'));
+        }
+    },
+    playlist: {
+        description: '🎶 プレイリストを設定',
+        options: [
+            new SlashCommandStringOption()
+                .setName('playlist')
+                .setDescription('プレイリストのURLを入力')
+                .setRequired(true)
+        ],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const url = interaction.options.get('playlist')?.value! as string;
+            const hash = url.match(/PL[\w-]{32}/);
+            if (!hash) {
+                notificationReply(interaction, ':warning: プレイリストのURLが正しくありません。');
+                return;
+            }
+
+            const playlist = await yts({ listId: hash[0] });
+            if (!playlist.videos.length) {
+                notificationReply(interaction, ':warning: プレイリストが空か、再生可能な曲がありません。');
+                return;
+            }
+
+            bot.playlist = playlist.videos.map(v => v.videoId);
+            bot.initMusicQueue();
+            bot.download(bot.musicQueue[0]);
+
+            interaction.reply(['🎶 プレイリストを設定しました。', playlist.url].join('\n'));
+        }
+    },
+    search: {
+        description: '🔍 YouTube 動画検索',
+        options: [
+            new SlashCommandStringOption()
+                .setName('search')
+                .setDescription('検索ワードを入力')
+                .setRequired(true)
+        ],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const word = interaction.options.get('search')?.value! as string;
+            const result = await yts(word);
+            const video = result.videos[0]
+            bot.musicQueue.unshift(video.videoId);
+            bot.download(bot.musicQueue[0]);
+
+            interaction.reply(['🎵 楽曲をキューに追加しました。', video.url].join('\n'));
+        }
+    },
     shuffle: {
         description: '🔀 シャッフル再生モードの切り替え',
         options: [],
@@ -114,7 +208,7 @@ export const commands: Commands = {
             bot.isShuffle = !bot.isShuffle;
             if (bot.isShuffle) {
                 bot.musicQueue = shuffle(bot.musicQueue);
-                bot.download(bot.musicQueue[0]);    
+                bot.download(bot.musicQueue[0]);
             }
 
             notificationReply(interaction, `🔀 シャッフル再生が ${bot.isShuffle ? 'ON' : 'OFF'} になりました。`);
