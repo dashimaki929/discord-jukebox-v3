@@ -18,7 +18,7 @@ import {
 
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
-import { deleteMessageFromKey, notificationReply } from './common/util.js';
+import { deleteMessageFromKey, notificationReply, shuffle } from './common/util.js';
 import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
 import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS } from './common/constants.js';
 
@@ -97,6 +97,27 @@ export const commands: Commands = {
             } else {
                 notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
             }
+        }
+    },
+    shuffle: {
+        description: '🔀 シャッフル再生モードの切り替え',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            bot.isShuffle = !bot.isShuffle;
+            if (bot.isShuffle) {
+                bot.musicQueue = shuffle(bot.musicQueue);
+                bot.download(bot.musicQueue[0]);    
+            }
+
+            notificationReply(interaction, `🔀 シャッフル再生が ${bot.isShuffle ? 'ON' : 'OFF'} になりました。`);
         }
     },
     pause: {

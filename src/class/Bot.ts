@@ -22,7 +22,7 @@ const ffmpegPath = ffmpegStatic as unknown as string;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
-import { readFile, removeCache, writeFile } from "../common/util.js";
+import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
 
 export class Bot {
     static DEFAULT_PLAYLIST: string[] = readFile('./config/playlist.txt').split(/\r?\n/);
@@ -102,7 +102,7 @@ export class Bot {
             const hash = this.#getNextMusicHash();
             console.log('[INFO]', 'Skip for song that are banned:', `${URLS.YOUTUBE}?v=${hash}`);
         }
-        this.#download(this.musicQueue[0]);
+        this.download(this.musicQueue[0]);
     }
 
     async #stream(): Promise<internal.Readable | undefined> {
@@ -112,7 +112,7 @@ export class Bot {
         this.currentMusic = hash;
 
         try {
-            const filepath = await this.#download(hash);
+            const filepath = await this.download(hash);
             return createReadStream(filepath);
         } catch (e) {
             console.log('[WARN]', e);
@@ -120,7 +120,7 @@ export class Bot {
         }
     }
 
-    #download(hash: string): Promise<string> {
+    download(hash: string): Promise<string> {
         return new Promise((resolve, reject) => {
             const url = `${URLS.YOUTUBE}?v=${hash}`;
 
@@ -140,7 +140,7 @@ export class Bot {
                     this.addBanlist(hash);
                     this.#getNextMusicHash() // skip next music.
 
-                    return this.#download(this.musicQueue[0]);
+                    return this.download(this.musicQueue[0]);
                 });
 
                 ffmpeg(stream).audioBitrate(128)
@@ -181,17 +181,9 @@ export class Bot {
 
     initMusicQueue(doShuffle: boolean = this.isShuffle): void {
         if (doShuffle) {
-            this.musicQueue = this.#shuffle(this.playlist);
+            this.musicQueue = shuffle(this.playlist);
         } else {
             this.musicQueue = this.playlist
         }
     }
-
-    #shuffle([...array]): string[] {
-        for (let i = array.length - 1; i >= 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    };
 }

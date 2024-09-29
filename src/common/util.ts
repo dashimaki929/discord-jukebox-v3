@@ -6,6 +6,20 @@ import { Bot } from '../class/Bot.js';
 import { MESSAGE_DELETE_TIMEOUT_MS } from './constants.js';
 
 /**
+ * Shuffle the array
+ * 
+ * @param array
+ * @returns 
+ */
+export function shuffle([...array]): string[] {
+    for (let i = array.length - 1; i >= 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
+
+/**
  * Read file as text
  *
  * @param filepath
