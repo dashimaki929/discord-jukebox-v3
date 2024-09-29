@@ -38,9 +38,9 @@ export const commands: Commands = {
             }
 
             try {
-                const command = interaction.options.get('code')?.value! as string;
+                const code = interaction.options.get('code')?.value! as string;
                 interaction.reply({
-                    content: ['```json', eval(command).substr(0, 1950), '```'].join('\n'),
+                    content: ['```json', eval(code).substr(0, 1950), '```'].join('\n'),
                     ephemeral: true,
                 });
             } catch (error) {
@@ -96,6 +96,27 @@ export const commands: Commands = {
                 notificationReply(interaction, ':red_circle: ボイスチャンネルから切断しました。');
             } else {
                 notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+            }
+        }
+    },
+    pause: {
+        description: '⏯ 再生中の曲を一時停止 / 一時停止中の曲を再開',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            if (bot.isPlaying) {
+                bot.player.pause();
+                notificationReply(interaction, '⏯ 再生中の楽曲を一時停止しました。');
+            } else {
+                bot.player.unpause();
+                notificationReply(interaction, '⏯ 一時停止中の楽曲を再開しました。');
             }
         }
     },
