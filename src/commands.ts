@@ -24,6 +24,10 @@ import { deleteMessageFromKey, notificationReply, shuffle } from './common/util.
 import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
+    /**
+     * debug Command
+     *      Used for debugging with a running bot.
+     */
     debug: {
         description: '🧰 デバッグ',
         options: [
@@ -49,6 +53,11 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * connect Command
+     *      Used for connect a bot to a voice channel.
+     */
     connect: {
         description: '🟢 ボイスチャンネルへ接続',
         options: [
@@ -82,6 +91,11 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * disconnect Command
+     *      Used for disconnect the bot from the voice channel.
+     */
     disconnect: {
         description: '🔴 ボイスチャンネルから切断',
         options: [],
@@ -100,6 +114,11 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * play Command
+     *      Used for add music to the queue.
+     */
     play: {
         description: '🎵 Youtube から動画を指定して音楽を再生',
         options: [
@@ -130,8 +149,13 @@ export const commands: Commands = {
             interaction.reply(['🎵 楽曲をキューに追加しました。', `${URLS.YOUTUBE}?v=${hash}`].join('\n'));
         }
     },
+
+    /**
+     * playlist Command
+     *      Used for set up playlists from YouTube.
+     */
     playlist: {
-        description: '🎶 プレイリストを設定',
+        description: '🎶 Youtube からプレイリストを設定',
         options: [
             new SlashCommandStringOption()
                 .setName('playlist')
@@ -167,8 +191,13 @@ export const commands: Commands = {
             interaction.reply(['🎶 プレイリストを設定しました。', playlist.url].join('\n'));
         }
     },
+
+    /**
+     * search Command
+     *      Used for search for musics from Youtube and add them to the queue.
+     */
     search: {
-        description: '🔍 YouTube 動画検索',
+        description: '🔍 YouTube から動画を検索',
         options: [
             new SlashCommandStringOption()
                 .setName('search')
@@ -193,6 +222,11 @@ export const commands: Commands = {
             interaction.reply(['🎵 楽曲をキューに追加しました。', video.url].join('\n'));
         }
     },
+
+    /**
+     * shuffle Command
+     *      Used for toggles between shuffling.
+     */
     shuffle: {
         description: '🔀 シャッフル再生モードの切り替え',
         options: [],
@@ -214,6 +248,11 @@ export const commands: Commands = {
             notificationReply(interaction, `🔀 シャッフル再生が ${bot.isShuffle ? 'ON' : 'OFF'} になりました。`);
         }
     },
+
+    /**
+     * pause Command
+     *      Used for toggles between pausing.
+     */
     pause: {
         description: '⏯ 再生中の曲を一時停止 / 一時停止中の曲を再開',
         options: [],
@@ -235,6 +274,11 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * skip Command
+     *      Used for skip the current music.
+     */
     skip: {
         description: '⏭️ 現在の曲をスキップ',
         options: [],
@@ -251,6 +295,11 @@ export const commands: Commands = {
             notificationReply(interaction, '⏭️ 再生中の楽曲をスキップしました。');
         }
     },
+
+    /**
+     * spotify Command
+     *      Used for integration with spotify.
+     */
     spotify: {
         description: '🌏 Spotifyと連携',
         options: [],
@@ -280,6 +329,11 @@ export const commands: Commands = {
             }).then(msg => bot.messages.set('spotify', msg));
         }
     },
+
+    /**
+     * spotify-code Command
+     *      Used for enter Spotifty's authentication code.
+     */
     spotify_code: {
         description: '',
         options: [],
@@ -298,6 +352,11 @@ export const commands: Commands = {
             );
         }
     },
+
+    /**
+     * spotify-auth Command
+     *      Used for authentication with Spotify.
+     */
     spotify_auth: {
         description: '',
         options: [],
