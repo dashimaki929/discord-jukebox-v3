@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv'
 dotenv.config();
 
-import { Client, GatewayIntentBits } from 'discord.js';
+import { ActivityType, Client, GatewayIntentBits } from 'discord.js';
 
 import { commands } from './commands.js';
 import { Bots, BotSetting } from './typedef.js';
@@ -18,6 +18,7 @@ const client = new Client({
 client.once('ready', async () => {
     await registSlashCommands(commands, settings);
 
+    client.user?.setActivity('/connect で音楽', { type: ActivityType.Listening });
     console.log('Bot "discord-jukebox-v3" has successfully started!');
 });
 
