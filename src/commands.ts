@@ -15,14 +15,19 @@ import {
     ButtonStyle,
     TextInputStyle,
 } from 'discord.js';
+import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
+import yts from 'yt-search';
 
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
-import { deleteMessageFromKey, notificationReply } from './common/util.js';
-import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
-import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS } from './common/constants.js';
+import { deleteMessageFromKey, notificationReply, shuffle } from './common/util.js';
+import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
+    /**
+     * debug Command
+     *      Used for debugging with a running bot.
+     */
     debug: {
         description: '🧰 デバッグ',
         options: [
@@ -38,9 +43,9 @@ export const commands: Commands = {
             }
 
             try {
-                const command = interaction.options.get('code')?.value! as string;
+                const code = interaction.options.get('code')?.value! as string;
                 interaction.reply({
-                    content: ['```json', eval(command).substr(0, 1950), '```'].join('\n'),
+                    content: ['```json', eval(code).substr(0, 1950), '```'].join('\n'),
                     ephemeral: true,
                 });
             } catch (error) {
@@ -48,6 +53,11 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * connect Command
+     *      Used for connect a bot to a voice channel.
+     */
     connect: {
         description: '🟢 ボイスチャンネルへ接続',
         options: [
@@ -81,6 +91,11 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * disconnect Command
+     *      Used for disconnect the bot from the voice channel.
+     */
     disconnect: {
         description: '🔴 ボイスチャンネルから切断',
         options: [],
@@ -99,6 +114,171 @@ export const commands: Commands = {
             }
         }
     },
+
+    /**
+     * play Command
+     *      Used for add music to the queue.
+     */
+    play: {
+        description: '🎵 Youtube から動画を指定して音楽を再生',
+        options: [
+            new SlashCommandStringOption()
+                .setName('play')
+                .setDescription('動画のURLを入力')
+                .setRequired(true)
+        ],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const url = interaction.options.get('play')?.value! as string;
+            const hash = url.match(/[\w-]{11}/);
+            if (!hash) {
+                notificationReply(interaction, ':warning: 動画のURLが正しくありません。');
+                return;
+            }
+
+            bot.musicQueue.unshift(hash[0]);
+            bot.download(bot.musicQueue[0]);
+
+            interaction.reply(['🎵 楽曲をキューに追加しました。', `${URLS.YOUTUBE}?v=${hash}`].join('\n'));
+        }
+    },
+
+    /**
+     * playlist Command
+     *      Used for set up playlists from YouTube.
+     */
+    playlist: {
+        description: '🎶 Youtube からプレイリストを設定',
+        options: [
+            new SlashCommandStringOption()
+                .setName('playlist')
+                .setDescription('プレイリストのURLを入力')
+                .setRequired(true)
+        ],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const url = interaction.options.get('playlist')?.value! as string;
+            const hash = url.match(/PL[\w-]{32}/);
+            if (!hash) {
+                notificationReply(interaction, ':warning: プレイリストのURLが正しくありません。');
+                return;
+            }
+
+            const playlist = await yts({ listId: hash[0] });
+            if (!playlist.videos.length) {
+                notificationReply(interaction, ':warning: プレイリストが空か、再生可能な曲がありません。');
+                return;
+            }
+
+            bot.playlist = playlist.videos.map(v => v.videoId);
+            bot.initMusicQueue();
+            bot.download(bot.musicQueue[0]);
+
+            interaction.reply(['🎶 プレイリストを設定しました。', playlist.url].join('\n'));
+        }
+    },
+
+    /**
+     * search Command
+     *      Used for search for musics from Youtube and add them to the queue.
+     */
+    search: {
+        description: '🔍 YouTube から動画を検索',
+        options: [
+            new SlashCommandStringOption()
+                .setName('search')
+                .setDescription('検索ワードを入力')
+                .setRequired(true)
+        ],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const word = interaction.options.get('search')?.value! as string;
+            const result = await yts(word);
+            const video = result.videos[0]
+            bot.musicQueue.unshift(video.videoId);
+            bot.download(bot.musicQueue[0]);
+
+            interaction.reply(['🎵 楽曲をキューに追加しました。', video.url].join('\n'));
+        }
+    },
+
+    /**
+     * shuffle Command
+     *      Used for toggles between shuffling.
+     */
+    shuffle: {
+        description: '🔀 シャッフル再生モードの切り替え',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            bot.isShuffle = !bot.isShuffle;
+            if (bot.isShuffle) {
+                bot.musicQueue = shuffle(bot.musicQueue);
+                bot.download(bot.musicQueue[0]);
+            }
+
+            notificationReply(interaction, `🔀 シャッフル再生が ${bot.isShuffle ? 'ON' : 'OFF'} になりました。`);
+        }
+    },
+
+    /**
+     * pause Command
+     *      Used for toggles between pausing.
+     */
+    pause: {
+        description: '⏯ 再生中の曲を一時停止 / 一時停止中の曲を再開',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            if (bot.isPlaying) {
+                bot.player.pause();
+                notificationReply(interaction, '⏯ 再生中の楽曲を一時停止しました。');
+            } else {
+                bot.player.unpause();
+                notificationReply(interaction, '⏯ 一時停止中の楽曲を再開しました。');
+            }
+        }
+    },
+
+    /**
+     * skip Command
+     *      Used for skip the current music.
+     */
     skip: {
         description: '⏭️ 現在の曲をスキップ',
         options: [],
@@ -115,6 +295,35 @@ export const commands: Commands = {
             notificationReply(interaction, '⏭️ 再生中の楽曲をスキップしました。');
         }
     },
+
+    ban: {
+        description: '🚫 現在の曲をBAN',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            if (!bot.currentMusic) {
+                notificationReply(interaction, ':warning: 再生中の音楽がありません。');
+                return;
+            }
+
+            const user = interaction.user;
+            bot.addBanlist(bot.currentMusic, `${user.displayName}(${user.tag})<${user.id}> によりBANされました。`);
+
+            commands.skip.execute(interaction, bot);
+        }
+    },
+
+    /**
+     * spotify Command
+     *      Used for integration with spotify.
+     */
     spotify: {
         description: '🌏 Spotifyと連携',
         options: [],
@@ -144,6 +353,11 @@ export const commands: Commands = {
             }).then(msg => bot.messages.set('spotify', msg));
         }
     },
+
+    /**
+     * spotify-code Command
+     *      Used for enter Spotifty's authentication code.
+     */
     spotify_code: {
         description: '',
         options: [],
@@ -162,6 +376,11 @@ export const commands: Commands = {
             );
         }
     },
+
+    /**
+     * spotify-auth Command
+     *      Used for authentication with Spotify.
+     */
     spotify_auth: {
         description: '',
         options: [],
@@ -215,7 +434,7 @@ export const commands: Commands = {
                     msg.delete();
                 }, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS));
             }).catch(error => {
-                console.error('APIの実行に失敗しました: ', error);
+                console.error('APIの実行に失敗しました:', error);
             });
         }
     },

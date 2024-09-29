@@ -29,6 +29,7 @@
     "@types/fluent-ffmpeg": "^2.1.26",
     "@types/node": "^22.5.5",
     "@types/spotify-web-api-node": "^5.0.11",
+    "@types/yt-search": "^2.10.3",
     "discord.js": "^14.16.2",
     "dotenv": "^16.4.5",
     "ffmpeg-static": "^5.2.0",
@@ -38,6 +39,7 @@
     "spotify-web-api-node": "^5.0.2",
     "tsx": "^4.19.1",
     "tweetnacl": "^1.0.3",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "yt-search": "^2.12.1"
   }
 }

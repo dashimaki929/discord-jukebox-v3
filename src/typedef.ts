@@ -26,3 +26,10 @@ export type CommandOption = {
     description: string;
     required: boolean;
 }
+
+export interface BANLIST {
+    [key: string]: {
+        reason: string,
+        bannedAt: Date,
+    }
+}

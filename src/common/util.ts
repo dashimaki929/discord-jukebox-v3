@@ -1,9 +1,23 @@
-import { readdirSync, readFileSync, unlinkSync } from 'fs';
+import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { ButtonInteraction, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
 
 import { Commands, Command, BotSetting } from '../typedef.js';
 import { Bot } from '../class/Bot.js';
 import { MESSAGE_DELETE_TIMEOUT_MS } from './constants.js';
+
+/**
+ * Shuffle the array
+ * 
+ * @param array
+ * @returns 
+ */
+export function shuffle([...array]): string[] {
+    for (let i = array.length - 1; i >= 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
 
 /**
  * Read file as text
@@ -16,11 +30,25 @@ export function readFile(filepath: string): string {
 
     try {
         data = readFileSync(filepath, 'utf-8');
-    } catch (e) {
-        console.error(e);
+    } catch (error) {
+        console.error('ファイルの読み込みに失敗しました:', error);
     }
 
     return data;
+}
+
+/**
+ * Update file from string.
+ * 
+ * @param filepath 
+ * @param content 
+ */
+export function writeFile(filepath: string, content: string): void {
+    try {
+        writeFileSync(filepath, content);
+    } catch (error) {
+        console.error('ファイルの書き込みに失敗しました:', error)
+    }
 }
 
 /**
@@ -30,7 +58,7 @@ export function readFile(filepath: string): string {
  */
 export function removeCache(ignoreFileName: string): void {
     const cacheDir = './mp3/cache';
-    
+
     const files = readdirSync(cacheDir);
     const muscis = files.filter(f => f.endsWith('.mp3'));
     muscis.filter(m => m.split('.')[0] !== ignoreFileName).forEach(m => {
@@ -38,7 +66,7 @@ export function removeCache(ignoreFileName: string): void {
         try {
             unlinkSync(filepath);
         } catch (error) {
-            console.error('ファイルの削除に失敗しました: ', filepath, error);
+            console.error('ファイルの削除に失敗しました:', filepath, error);
         }
     });
 }

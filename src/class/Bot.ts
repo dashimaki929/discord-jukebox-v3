@@ -2,7 +2,7 @@ import internal from "stream";
 import { createReadStream, existsSync } from "fs";
 
 import { InteractionResponse, Message } from "discord.js";
-import { 
+import {
     AudioPlayer,
     AudioPlayerStatus,
     AudioResource,
@@ -21,10 +21,14 @@ import ffmpegStatic from 'ffmpeg-static';
 const ffmpegPath = ffmpegStatic as unknown as string;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-import { DEFAULT_VOLUME, URLS } from "../common/constants.js";
-import { removeCache } from "../common/util.js";
+import { BANLIST } from "../typedef.js";
+import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
+import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
 
 export class Bot {
+    static DEFAULT_PLAYLIST: string[] = readFile('./config/playlist.txt').split(/\r?\n/);
+    static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
+
     guildId: string;
     playlist: string[];
     musicQueue: string[];
@@ -38,9 +42,9 @@ export class Bot {
     spotifyApi: SpotifyWebApi;
     player: AudioPlayer;
 
-    constructor(guildId: string, playlist: string[] = []) {
+    constructor(guildId: string) {
         this.guildId = guildId;
-        this.playlist = playlist.filter(Boolean);
+        this.playlist = Bot.DEFAULT_PLAYLIST.filter(Boolean);
         this.musicQueue = [];
         this.currentMusic = '';
         this.audioResource = null;
@@ -64,7 +68,7 @@ export class Bot {
         });
         this.player.on(AudioPlayerStatus.Playing, () => { this.isPlaying = true });
         this.player.on(AudioPlayerStatus.Paused, () => { this.isPlaying = false });
-        this.player.on(AudioPlayerStatus.Idle, () => { 
+        this.player.on(AudioPlayerStatus.Idle, () => {
             this.play();
             removeCache(this.currentMusic);
         });
@@ -95,7 +99,11 @@ export class Bot {
         this.player.play(this.audioResource);
 
         // pre-download next music.
-        this.#download(this.musicQueue[0]);
+        while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
+            const hash = this.#getNextMusicHash();
+            console.log('[INFO]', 'Skip for song that are banned:', `${URLS.YOUTUBE}?v=${hash}`);
+        }
+        this.download(this.musicQueue[0]);
     }
 
     async #stream(): Promise<internal.Readable | undefined> {
@@ -105,7 +113,7 @@ export class Bot {
         this.currentMusic = hash;
 
         try {
-            const filepath = await this.#download(hash);
+            const filepath = await this.download(hash);
             return createReadStream(filepath);
         } catch (e) {
             console.log('[WARN]', e);
@@ -113,25 +121,28 @@ export class Bot {
         }
     }
 
-    #download(hash: string): Promise<string> {
+    download(hash: string): Promise<string> {
         return new Promise((resolve, reject) => {
             const url = `${URLS.YOUTUBE}?v=${hash}`;
 
             const filepath = `./mp3/cache/${hash}.mp3`;
             if (!existsSync(filepath)) {
-                console.log('[INFO]', `download: ${url}`);
+                console.log('[INFO]', 'Download:', url);
 
                 const stream = ytdl(url, { filter: 'audioonly' }).on('error', error => {
+                    let reason;
                     if (error.message.includes('only available to Music Premium members')) {
-                        console.warn('[WARN]', `${hash}: Youtubeプレミアム限定のコンテンツです。`)
+                        reason = 'Youtubeプレミアム限定のコンテンツです。';
                     } else if (error.message.includes('confirm your age')) {
-                        console.warn('[WARN]', `${hash}: 年齢確認の必要なコンテンツです。`)
+                        reason = '年齢確認の必要なコンテンツです。';
                     } else {
-                        console.error('[ERROR]', `${hash}: 利用できないコンテンツです。`)
+                        reason = '利用できないコンテンツです。';
                     }
+                    
+                    this.addBanlist(hash, reason);
+                    this.#getNextMusicHash() // skip next music.
 
-                    // 再生できないコンテンツを bot.playlist から削除して banlist に追加する
-
+                    return this.download(this.musicQueue[0]);
                 });
 
                 ffmpeg(stream).audioBitrate(128)
@@ -150,27 +161,33 @@ export class Bot {
         });
     }
 
-    #getNextMusicHash(): string | undefined {
+    addBanlist(hash: string, reason: string): void {
+        console.warn('[WARN]', `${hash}:`, reason);
+
+        Bot.BANNED_HASH_LIST[hash] = { reason, bannedAt: new Date };
+        writeFile('./config/banlist.json', JSON.stringify(Bot.BANNED_HASH_LIST, null, '\t'));
+
+        console.log('[INFO]', 'Added to ban list:', `${URLS.YOUTUBE}?v=${hash}`);
+    }
+
+    #getNextMusicHash(): string {
         if (!this.musicQueue.length) {
             this.initMusicQueue();
         }
 
-        return this.musicQueue.shift();
+        let hash = this.musicQueue.shift();
+        if (!hash) {
+            hash = INTERLUDES[Math.floor(Math.random() * INTERLUDES.length)];
+        }
+
+        return hash;
     }
 
     initMusicQueue(doShuffle: boolean = this.isShuffle): void {
         if (doShuffle) {
-            this.musicQueue = this.#shuffle(this.playlist);
+            this.musicQueue = shuffle(this.playlist);
         } else {
             this.musicQueue = this.playlist
         }
     }
-
-    #shuffle([...array]): string[] {
-        for (let i = array.length - 1; i >= 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    };
 }
