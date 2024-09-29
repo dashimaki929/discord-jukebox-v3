@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import { readdirSync, readFileSync, unlinkSync } from 'fs';
 import { ButtonInteraction, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
 
 import { Commands, Command, BotSetting } from '../typedef.js';
@@ -15,13 +15,31 @@ export function readFile(filepath: string): string {
     let data = '';
 
     try {
-        data = fs.readFileSync(filepath, 'utf-8');
-        console.debug(data);
+        data = readFileSync(filepath, 'utf-8');
     } catch (e) {
         console.error(e);
     }
 
     return data;
+}
+
+/**
+ * Remove cache files other than those with the specified name
+ * 
+ * @param ignoreFileName 
+ */
+export function removeCache(ignoreFileName: string): void {
+    const cacheDir = './mp3/cache';
+    
+    const files = readdirSync(cacheDir);
+    files.filter(f => f.split('.')[0] !== ignoreFileName).forEach(f => {
+        const filepath = `${cacheDir}/${f}`;
+        try {
+            unlinkSync(filepath);
+        } catch (error) {
+            console.error('ファイルの削除に失敗しました: ', filepath, error);
+        }
+    });
 }
 
 /**

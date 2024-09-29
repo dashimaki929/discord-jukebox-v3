@@ -33,26 +33,27 @@ $ npm -v
 
 ### インストール済みライブラリ
 
--   typescript
--   @types/node@22
-    > `TypeScript v22` 用インテリセンス
--   tsx
-    > TypeScript を即時コンパイル、実行する
--   nodemon
-    > ファイルの変更監視、変更時に `ts-node` を再起動する
-    >
-    > > 詳細な使用内容は `package.json` の `run-scripts` を参照
+-   @discordjs/voice
+    > `discord.js` 音声操作用ライブラリ
+-   @distube/ytdl-core
+    > `ytdl-core` 代替ライブラリ
+-   @types/fluent-ffmpeg
+-   @types/node
+-   @types/spotify-web-api-node
 -   discord.js
     > [discord.js - Documentation](https://discord.js.org/#/docs/discord.js/main/general/welcome)  
     > [discord.js - Guide](https://discordjs.guide/)
--   @discordjs/voice
-    > `discord.js` 音声操作用ライブラリ
--   spotify-web-api-node
-    > Spotify Web API 実行用ライブラリ
--   @types/spotify-web-api-node
-    > spotify-web-api-node 用 TypeScript インテリセンス
 -   dotenv
     > 環境変数参照用ライブラリ（ローカル ⇔ 本番の環境差異吸収）
+-   ffmpeg-static
+-   fluent-ffmpeg
+-   nodemon
+-   opusscript
+-   spotify-web-api-node
+    > Spotify Web API 実行用ライブラリ
+-   tsx
+-   tweetnacl
+-   typescript
 
 ### トラブルシューティング
 

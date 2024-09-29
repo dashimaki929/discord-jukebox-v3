@@ -5,3 +5,6 @@ export const COLORS = { PRIMARY: 0xed04eb, SECONDARY: 0xf0b132, OTHER: 0x4f545c,
 export const ICONS = {
     SPOTIFY: 'https://storage.googleapis.com/spotifynewsroom-jp.appspot.com/1/2020/12/Spotify_Icon_CMYK_Green.png',
 }
+export const URLS = {
+    YOUTUBE: 'https://www.youtube.com/watch',
+}

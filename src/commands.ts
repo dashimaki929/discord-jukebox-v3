@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import { randomUUID } from 'crypto';
 
 import {
     ButtonInteraction,
@@ -40,11 +40,11 @@ export const commands: Commands = {
             try {
                 const command = interaction.options.get('code')?.value! as string;
                 interaction.reply({
-                    content: ['```json', eval(command), '```'].join('\n'),
+                    content: ['```json', eval(command).substr(0, 1950), '```'].join('\n'),
                     ephemeral: true,
                 });
-            } catch (err) {
-                notificationReply(interaction, ['```', err, '```'].join('\n'));
+            } catch (error) {
+                notificationReply(interaction, ['```', error, '```'].join('\n'));
             }
         }
     },
@@ -57,7 +57,7 @@ export const commands: Commands = {
                 .setRequired(true)
                 .addChannelTypes(ChannelType.GuildVoice)
         ],
-        execute: async (interaction: CommandInteraction) => {
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
             const channelId = interaction.options.get('channel')?.value! as string;
             const voiceChannel = interaction.guild?.channels.cache.get(channelId);
 
@@ -72,6 +72,8 @@ export const commands: Commands = {
                     guildId: interaction.guildId,
                     adapterCreator: interaction.guild.voiceAdapterCreator,
                 });
+
+                bot.play();
 
                 notificationReply(interaction, `:green_circle: ボイスチャンネル（\`${voiceChannel.name}\`）に接続しました。`)
             } else {
@@ -97,6 +99,22 @@ export const commands: Commands = {
             }
         }
     },
+    skip: {
+        description: '⏭️ 現在の曲をスキップ',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            bot.player.stop();
+            notificationReply(interaction, '⏭️ 再生中の楽曲をスキップしました。');
+        }
+    },
     spotify: {
         description: '🌏 Spotifyと連携',
         options: [],
@@ -107,7 +125,7 @@ export const commands: Commands = {
             }
 
             const scopes = ['playlist-read-private', 'user-library-read'];
-            const state = crypto.randomUUID();
+            const state = randomUUID();
             interaction.reply({
                 embeds: [
                     new EmbedBuilder()
@@ -157,7 +175,7 @@ export const commands: Commands = {
             await bot.spotifyApi.authorizationCodeGrant(code).then(data => {
                 bot.spotifyApi.setAccessToken(data.body.access_token);
                 bot.spotifyApi.setRefreshToken(data.body.refresh_token);
-            }).catch(err => {
+            }).catch(error => {
                 interaction.reply({
                     embeds: [
                         new EmbedBuilder()
@@ -166,7 +184,7 @@ export const commands: Commands = {
                             .setTitle('Spotify連携失敗')
                             .setDescription([
                                 'Spotifyアカウントの連携に失敗しました。',
-                                '```', err, '```'
+                                '```', error, '```'
                             ].join('\n'))
                     ],
                     ephemeral: true
@@ -196,8 +214,8 @@ export const commands: Commands = {
                     deleteMessageFromKey(bot, 'spotify');
                     msg.delete();
                 }, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS));
-            }).catch(err => {
-                console.error('APIの実行に失敗しました: ', err);
+            }).catch(error => {
+                console.error('APIの実行に失敗しました: ', error);
             });
         }
     },
