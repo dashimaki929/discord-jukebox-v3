@@ -130,4 +130,4 @@ dist
 .pnp.*
 
 # other
-mp3/cache/
+mp3/cache/*.mp3
