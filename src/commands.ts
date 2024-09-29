@@ -296,6 +296,30 @@ export const commands: Commands = {
         }
     },
 
+    ban: {
+        description: '🚫 現在の曲をBAN',
+        options: [],
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            if (!bot.currentMusic) {
+                notificationReply(interaction, ':warning: 再生中の音楽がありません。');
+                return;
+            }
+
+            const user = interaction.user;
+            bot.addBanlist(bot.currentMusic, `${user.displayName}(${user.tag})<${user.id}> によりBANされました。`);
+
+            commands.skip.execute(interaction, bot);
+        }
+    },
+
     /**
      * spotify Command
      *      Used for integration with spotify.

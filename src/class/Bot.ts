@@ -21,12 +21,13 @@ import ffmpegStatic from 'ffmpeg-static';
 const ffmpegPath = ffmpegStatic as unknown as string;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+import { BANLIST } from "../typedef.js";
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
 import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
 
 export class Bot {
     static DEFAULT_PLAYLIST: string[] = readFile('./config/playlist.txt').split(/\r?\n/);
-    static BANLIST: string[] = readFile('./config/banlist.txt').split(/\r?\n/);
+    static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
 
     guildId: string;
     playlist: string[];
@@ -98,7 +99,7 @@ export class Bot {
         this.player.play(this.audioResource);
 
         // pre-download next music.
-        while (Bot.BANLIST.includes(this.musicQueue[0])) {
+        while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
             const hash = this.#getNextMusicHash();
             console.log('[INFO]', 'Skip for song that are banned:', `${URLS.YOUTUBE}?v=${hash}`);
         }
@@ -129,15 +130,16 @@ export class Bot {
                 console.log('[INFO]', 'Download:', url);
 
                 const stream = ytdl(url, { filter: 'audioonly' }).on('error', error => {
+                    let reason;
                     if (error.message.includes('only available to Music Premium members')) {
-                        console.warn('[WARN]', `${hash}: Youtubeプレミアム限定のコンテンツです。`);
+                        reason = 'Youtubeプレミアム限定のコンテンツです。';
                     } else if (error.message.includes('confirm your age')) {
-                        console.warn('[WARN]', `${hash}: 年齢確認の必要なコンテンツです。`);
+                        reason = '年齢確認の必要なコンテンツです。';
                     } else {
-                        console.error('[ERROR]', `${hash}: 利用できないコンテンツです。`);
+                        reason = '利用できないコンテンツです。';
                     }
-
-                    this.addBanlist(hash);
+                    
+                    this.addBanlist(hash, reason);
                     this.#getNextMusicHash() // skip next music.
 
                     return this.download(this.musicQueue[0]);
@@ -159,9 +161,11 @@ export class Bot {
         });
     }
 
-    addBanlist(hash: string): void {
-        Bot.BANLIST.push(hash);
-        writeFile('./config/banlist.txt', Bot.BANLIST.filter(Boolean).join('\n'));
+    addBanlist(hash: string, reason: string): void {
+        console.warn('[WARN]', `${hash}:`, reason);
+
+        Bot.BANNED_HASH_LIST[hash] = { reason, bannedAt: new Date };
+        writeFile('./config/banlist.json', JSON.stringify(Bot.BANNED_HASH_LIST, null, '\t'));
 
         console.log('[INFO]', 'Added to ban list:', `${URLS.YOUTUBE}?v=${hash}`);
     }
