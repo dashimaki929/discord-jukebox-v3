@@ -32,8 +32,9 @@ export function removeCache(ignoreFileName: string): void {
     const cacheDir = './mp3/cache';
     
     const files = readdirSync(cacheDir);
-    files.filter(f => f.split('.')[0] !== ignoreFileName).forEach(f => {
-        const filepath = `${cacheDir}/${f}`;
+    const muscis = files.filter(f => f.endsWith('.mp3'));
+    muscis.filter(m => m.split('.')[0] !== ignoreFileName).forEach(m => {
+        const filepath = `${cacheDir}/${m}`;
         try {
             unlinkSync(filepath);
         } catch (error) {

@@ -16,7 +16,9 @@ import SpotifyWebApi from "spotify-web-api-node";
 import ytdl from "@distube/ytdl-core";
 
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
+import ffmpegStatic from 'ffmpeg-static';
+
+const ffmpegPath = ffmpegStatic as unknown as string;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { DEFAULT_VOLUME, URLS } from "../common/constants.js";
