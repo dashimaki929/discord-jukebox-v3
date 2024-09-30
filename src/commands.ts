@@ -38,7 +38,7 @@ export const commands: Commands = {
         ],
         execute: async (interaction: CommandInteraction, bot: Bot) => {
             if (interaction.user.id !== process.env.DISCORD_HOST_USER_ID) {
-                notificationReply(interaction, ':warning: このコマンドを実行する権限がありません。')
+                notificationReply(interaction, '⛔ このコマンドを実行する権限がありません。')
                 return;
             }
 
@@ -73,7 +73,7 @@ export const commands: Commands = {
 
             if (voiceChannel) {
                 if (!interaction.guild || !interaction.guildId) {
-                    notificationReply(interaction, ':warning: 予期せぬエラーが発生しました。')
+                    notificationReply(interaction, '❌ 予期せぬエラーが発生しました。')
                     return;
                 }
 
@@ -85,9 +85,9 @@ export const commands: Commands = {
 
                 bot.play();
 
-                notificationReply(interaction, `:green_circle: ボイスチャンネル（\`${voiceChannel.name}\`）に接続しました。`)
+                notificationReply(interaction, `🟢 ボイスチャンネル（\`${voiceChannel.name}\`）に接続しました。`)
             } else {
-                notificationReply(interaction, ':warning: 指定されたボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 指定されたボイスチャンネルが存在しません。');
             }
         }
     },
@@ -101,16 +101,16 @@ export const commands: Commands = {
         options: [],
         execute: async (interaction: CommandInteraction) => {
             if (!interaction.guildId) {
-                notificationReply(interaction, ':warning: 予期せぬエラーが発生しました。')
+                notificationReply(interaction, '❌ 予期せぬエラーが発生しました。')
                 return;
             }
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (voiceConnection) {
                 voiceConnection.destroy();
-                notificationReply(interaction, ':red_circle: ボイスチャンネルから切断しました。');
+                notificationReply(interaction, '🔴 ボイスチャンネルから切断しました。');
             } else {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
             }
         }
     },
@@ -132,21 +132,21 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
             const url = interaction.options.get('play')?.value! as string;
             const hash = url.match(/[\w-]{11}/);
             if (!hash) {
-                notificationReply(interaction, ':warning: 動画のURLが正しくありません。');
+                notificationReply(interaction, '❌ 動画のURLが正しくありません。');
                 return;
             }
 
             bot.musicQueue.unshift(hash[0]);
             bot.download(bot.musicQueue[0]);
 
-            interaction.reply(['🎵 楽曲をキューに追加しました。', `${URLS.YOUTUBE}?v=${hash}`].join('\n'));
+            notificationReply(interaction, ['🎵 楽曲をキューに追加しました。', `${URLS.YOUTUBE}?v=${hash}`].join('\n'));
         }
     },
 
@@ -167,20 +167,20 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
             const url = interaction.options.get('playlist')?.value! as string;
             const hash = url.match(/PL[\w-]{32}/);
             if (!hash) {
-                notificationReply(interaction, ':warning: プレイリストのURLが正しくありません。');
+                notificationReply(interaction, '❌ プレイリストのURLが正しくありません。');
                 return;
             }
 
             const playlist = await yts({ listId: hash[0] });
             if (!playlist.videos.length) {
-                notificationReply(interaction, ':warning: プレイリストが空か、再生可能な曲がありません。');
+                notificationReply(interaction, '❌ プレイリストが空か、再生可能な曲がありません。');
                 return;
             }
 
@@ -188,7 +188,7 @@ export const commands: Commands = {
             bot.initMusicQueue();
             bot.download(bot.musicQueue[0]);
 
-            interaction.reply(['🎶 プレイリストを設定しました。', playlist.url].join('\n'));
+            notificationReply(interaction, ['🎶 プレイリストを設定しました。', playlist.url].join('\n'));
         }
     },
 
@@ -209,7 +209,7 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
@@ -219,7 +219,7 @@ export const commands: Commands = {
             bot.musicQueue.unshift(video.videoId);
             bot.download(bot.musicQueue[0]);
 
-            interaction.reply(['🎵 楽曲をキューに追加しました。', video.url].join('\n'));
+            notificationReply(interaction, ['🎵 楽曲をキューに追加しました。', video.url].join('\n'));
         }
     },
 
@@ -235,7 +235,7 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
@@ -261,7 +261,7 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
@@ -287,7 +287,7 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
@@ -304,12 +304,12 @@ export const commands: Commands = {
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
-                notificationReply(interaction, ':warning: 接続中のボイスチャンネルが存在しません。');
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
                 return;
             }
 
             if (!bot.currentMusic) {
-                notificationReply(interaction, ':warning: 再生中の音楽がありません。');
+                notificationReply(interaction, '❌ 再生中の音楽がありません。');
                 return;
             }
 
@@ -329,7 +329,7 @@ export const commands: Commands = {
         options: [],
         execute: async (interaction: CommandInteraction, bot: Bot) => {
             if (!bot) {
-                notificationReply(interaction, ':warning: ボイスチャンネルに接続してから実行してください。')
+                notificationReply(interaction, '❌ ボイスチャンネルに接続してから実行してください。')
                 return;
             }
 
@@ -386,7 +386,7 @@ export const commands: Commands = {
         options: [],
         execute: async (interaction: ModalSubmitInteraction, bot: Bot) => {
             if (!bot) {
-                notificationReply(interaction, ':warning: ボイスチャンネルに接続してから実行してください。')
+                notificationReply(interaction, '❌ ボイスチャンネルに接続してから実行してください。')
                 return;
             }
 
