@@ -190,7 +190,7 @@ export class Bot {
         if (doShuffle) {
             this.musicQueue = shuffle(this.playlist);
         } else {
-            this.musicQueue = this.playlist
+            this.musicQueue = [...this.playlist];
         }
     }
 }
