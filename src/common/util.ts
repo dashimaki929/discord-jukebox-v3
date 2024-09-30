@@ -120,6 +120,9 @@ export async function deleteMessageFromKey(bot: Bot, key: string): Promise<void>
  * @param content 
  */
 export async function notificationReply(interaction: CommandInteraction | ButtonInteraction | ModalSubmitInteraction, content: string, deleteTimeoutMS: number = MESSAGE_DELETE_TIMEOUT_MS): Promise<void> {
+    const [guild, user] = [interaction.guild, interaction.user];
+    console.log('[INFO]', `<guild id="${guild?.id}" name="${guild?.name}">`, `<user id="${user.id}" name="${user.displayName}">`, content);
+
     await interaction.reply({ content, ephemeral: true }).then(msg => {
         setTimeout(() => {
             msg.delete();
