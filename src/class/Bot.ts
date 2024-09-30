@@ -123,8 +123,11 @@ export class Bot {
 
     download(hash: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            const url = `${URLS.YOUTUBE}?v=${hash}`;
+            if (!hash) {
+                hash = this.#getNextMusicHash();
+            }
 
+            const url = `${URLS.YOUTUBE}?v=${hash}`;
             const filepath = `./mp3/cache/${hash}.mp3`;
             if (!existsSync(filepath)) {
                 console.log('[INFO]', 'Download:', url);
