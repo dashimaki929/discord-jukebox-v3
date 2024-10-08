@@ -44,8 +44,9 @@ export const commands: Commands = {
 
             try {
                 const code = interaction.options.get('code')?.value! as string;
+                const result = new Function(`"use strict"; return (async () => { ${code} })()`)();
                 interaction.reply({
-                    content: ['```json', eval(code).substr(0, 1950), '```'].join('\n'),
+                    content: ['```json', JSON.stringify(result).substring(0, 1900), '```'].join('\n'),
                     ephemeral: true,
                 });
             } catch (error) {
