@@ -1,7 +1,7 @@
 import internal from "stream";
 import { createReadStream, existsSync } from "fs";
 
-import { InteractionResponse, Message } from "discord.js";
+import { EmbedBuilder, InteractionResponse, Message } from "discord.js";
 import {
     AudioPlayer,
     AudioPlayerStatus,
@@ -22,7 +22,7 @@ const ffmpegPath = ffmpegStatic as unknown as string;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
-import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
+import { COLORS, DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
 import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
 
 export class Bot {
@@ -31,6 +31,8 @@ export class Bot {
 
     guildId: string;
     playlist: string[];
+    currentPlaylistTitle: string;
+    currentPlaylistUrl: string;
     musicQueue: string[];
     currentMusic: string;
     audioResource: AudioResource | null;
@@ -45,6 +47,8 @@ export class Bot {
     constructor(guildId: string) {
         this.guildId = guildId;
         this.playlist = Bot.DEFAULT_PLAYLIST.filter(Boolean);
+        this.currentPlaylistTitle = 'Default Playlist';
+        this.currentPlaylistUrl = '';
         this.musicQueue = [];
         this.currentMusic = '';
         this.audioResource = null;
@@ -97,6 +101,7 @@ export class Bot {
         this.audioResource.volume?.setVolume(this.volume);
 
         this.player.play(this.audioResource);
+        this.#updatePlayerInfo(this.currentMusic);
 
         // pre-download next music.
         while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
@@ -141,7 +146,7 @@ export class Bot {
                     } else {
                         reason = '利用できないコンテンツです。';
                     }
-                    
+
                     this.addBanlist(hash, reason);
                     this.#getNextMusicHash() // skip next music.
 
@@ -161,6 +166,45 @@ export class Bot {
             } else {
                 resolve(filepath);
             }
+        });
+    }
+
+    async #updatePlayerInfo(hash: string): Promise<void> {
+        const message = this.messages.get('player');
+        if (!message) return;
+
+        const info = await ytdl.getBasicInfo(`${URLS.YOUTUBE}?v=${hash}`);
+        const [authorImage, title, url, artist, keywords, thumbnail] = [
+            info.videoDetails.author.thumbnails?.pop()?.url! as string,
+            info.videoDetails.title,
+            info.videoDetails.video_url,
+            info.videoDetails.author.name,
+            info.videoDetails.keywords || [],
+            info.videoDetails.thumbnails.pop()?.url! as string,
+        ]
+
+
+        message.edit({
+            embeds: [
+                new EmbedBuilder()
+                    .setColor(COLORS.SECONDARY)
+                    .setAuthor({ name: 'Jukebox', iconURL: 'attachment://icon.png' })
+                    .setTitle('再生中の音楽情報')
+                    .setThumbnail(authorImage)
+                    .addFields({
+                        name: 'プレイリスト',
+                        value: this.currentPlaylistUrl
+                            ? `[${this.currentPlaylistTitle}](${this.currentPlaylistUrl})`
+                            : `\`${this.currentPlaylistTitle}\``
+                    })
+                    .addFields({ name: 'タイトル', value: `[${title}](${url})` })
+                    .addFields({ name: 'アーティスト', value: artist })
+                    .addFields({ name: '関連キーワード', value: keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし' })
+                    .setImage(thumbnail)
+            ],
+            files: [
+                { attachment: './img/icon.png', name: 'icon.png' },
+            ]
         });
     }
 
