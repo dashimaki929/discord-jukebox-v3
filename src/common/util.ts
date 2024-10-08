@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
-import { ButtonInteraction, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
 
 import { Commands, Command, BotSetting } from '../typedef.js';
 import { Bot } from '../class/Bot.js';
@@ -120,12 +120,33 @@ export async function deleteMessageFromKey(bot: Bot, key: string): Promise<void>
  * @param content 
  */
 export async function notificationReply(interaction: CommandInteraction | ButtonInteraction | ModalSubmitInteraction, content: string, deleteTimeoutMS: number = MESSAGE_DELETE_TIMEOUT_MS): Promise<void> {
-    const [guild, user] = [interaction.guild, interaction.user];
-    console.log('[INFO]', `<guild id="${guild?.id}" name="${guild?.name}">`, `<user id="${user.id}" name="${user.displayName}">`, content);
+    console.log('[INFO]', content);
 
     await interaction.reply({ content, ephemeral: true }).then(msg => {
         setTimeout(() => {
             msg.delete();
         }, deleteTimeoutMS);
     })
+}
+
+/**
+ * Update player button
+ * 
+ * @param bot 
+ * @returns 
+ */
+export async function updatePlayerButton(bot: Bot): Promise<void> {
+    const message = bot.messages.get('player');
+    if (!message) return;
+
+    message.edit({
+        components: [
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder().setCustomId('shuffle').setEmoji(bot.isShuffle ? '🔃' : '🔀').setLabel(bot.isShuffle ? 'ランダムOFF' : 'ランダムON').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('pause').setEmoji(bot.isPlaying ? '⏸' : '▶️').setLabel(bot.isPlaying ? '停止' : '再開').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('skip').setEmoji('⏭️').setLabel('スキップ').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('disconnect').setEmoji('🛑').setLabel('切断').setStyle(ButtonStyle.Danger),
+            )
+        ]
+    });
 }

@@ -14,13 +14,14 @@ import {
     ChannelType,
     ButtonStyle,
     TextInputStyle,
+    AttachmentBuilder,
 } from 'discord.js';
 import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
 import yts from 'yt-search';
 
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
-import { deleteMessageFromKey, notificationReply, shuffle } from './common/util.js';
+import { deleteMessageFromKey, notificationReply, shuffle, updatePlayerButton } from './common/util.js';
 import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
@@ -44,8 +45,9 @@ export const commands: Commands = {
 
             try {
                 const code = interaction.options.get('code')?.value! as string;
+                const result = new Function(`"use strict"; return (async () => { ${code} })()`)();
                 interaction.reply({
-                    content: ['```json', eval(code).substr(0, 1950), '```'].join('\n'),
+                    content: ['```json', JSON.stringify(result).substring(0, 1900), '```'].join('\n'),
                     ephemeral: true,
                 });
             } catch (error) {
@@ -85,6 +87,39 @@ export const commands: Commands = {
 
                 bot.play();
 
+                const channel = await interaction.guild.channels.fetch(interaction.channelId ?? '');
+                if (channel?.isTextBased()) {
+                    channel.send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setColor(COLORS.SECONDARY)
+                                .setAuthor({ name: 'Jukebox', iconURL: 'attachment://icon.png' })
+                                .setTitle('音楽をロード中...')
+                                .setThumbnail('attachment://download.gif')
+                                .addFields({
+                                    name: 'プレイリスト',
+                                    value: bot.currentPlaylistUrl
+                                        ? `[${bot.currentPlaylistTitle}](${bot.currentPlaylistUrl})`
+                                        : `\`${bot.currentPlaylistTitle}\``
+                                })
+                                .setImage('attachment://loading.gif')
+                        ],
+                        files: [
+                            new AttachmentBuilder('./img/icon.png').setName('icon.png'),
+                            new AttachmentBuilder('./img/download.gif').setName('download.gif'),
+                            new AttachmentBuilder('./img/loading.gif').setName('loading.gif'),
+                        ],
+                        components: [
+                            new ActionRowBuilder<ButtonBuilder>().addComponents(
+                                new ButtonBuilder().setCustomId('shuffle').setEmoji('🔀').setLabel('ランダムON').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('pause').setEmoji('⏸').setLabel('停止').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('skip').setEmoji('⏭️').setLabel('スキップ').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('disconnect').setEmoji('🛑').setLabel('切断').setStyle(ButtonStyle.Danger),
+                            )
+                        ],
+                    }).then(msg => bot.messages.set('player', msg));
+                }
+
                 notificationReply(interaction, `🟢 ボイスチャンネル（\`${voiceChannel.name}\`）に接続しました。`)
             } else {
                 notificationReply(interaction, '❌ 指定されたボイスチャンネルが存在しません。');
@@ -99,7 +134,7 @@ export const commands: Commands = {
     disconnect: {
         description: '🔴 ボイスチャンネルから切断',
         options: [],
-        execute: async (interaction: CommandInteraction) => {
+        execute: async (interaction: CommandInteraction, bot: Bot) => {
             if (!interaction.guildId) {
                 notificationReply(interaction, '❌ 予期せぬエラーが発生しました。')
                 return;
@@ -108,6 +143,8 @@ export const commands: Commands = {
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (voiceConnection) {
                 voiceConnection.destroy();
+                await deleteMessageFromKey(bot, 'player');
+
                 notificationReply(interaction, '🔴 ボイスチャンネルから切断しました。');
             } else {
                 notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
@@ -185,6 +222,8 @@ export const commands: Commands = {
             }
 
             bot.playlist = playlist.videos.map(v => v.videoId);
+            bot.currentPlaylistTitle = playlist.title;
+            bot.currentPlaylistUrl = playlist.url;
             bot.initMusicQueue();
             bot.download(bot.musicQueue[0]);
 
@@ -230,7 +269,7 @@ export const commands: Commands = {
     shuffle: {
         description: '🔀 シャッフル再生モードの切り替え',
         options: [],
-        execute: async (interaction: CommandInteraction, bot: Bot) => {
+        execute: async (interaction: CommandInteraction | ButtonInteraction, bot: Bot) => {
             if (!interaction.guildId) return;
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
@@ -245,6 +284,13 @@ export const commands: Commands = {
                 bot.download(bot.musicQueue[0]);
             }
 
+            updatePlayerButton(bot);
+
+            if (interaction.isButton()) {
+                interaction.deferUpdate();
+                return;
+            }
+
             notificationReply(interaction, `🔀 シャッフル再生が ${bot.isShuffle ? 'ON' : 'OFF'} になりました。`);
         }
     },
@@ -256,7 +302,7 @@ export const commands: Commands = {
     pause: {
         description: '⏯ 再生中の曲を一時停止 / 一時停止中の曲を再開',
         options: [],
-        execute: async (interaction: CommandInteraction, bot: Bot) => {
+        execute: async (interaction: CommandInteraction | ButtonInteraction, bot: Bot) => {
             if (!interaction.guildId) return;
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
@@ -265,13 +311,23 @@ export const commands: Commands = {
                 return;
             }
 
+            let content = '';
             if (bot.isPlaying) {
                 bot.player.pause();
-                notificationReply(interaction, '⏯ 再生中の楽曲を一時停止しました。');
+                content = '⏯ 再生中の楽曲を一時停止しました。';
             } else {
                 bot.player.unpause();
-                notificationReply(interaction, '⏯ 一時停止中の楽曲を再開しました。');
+                content = '⏯ 一時停止中の楽曲を再開しました。';
             }
+
+            updatePlayerButton(bot);
+
+            if (interaction.isButton()) {
+                interaction.deferUpdate();
+                return;
+            }
+
+            notificationReply(interaction, content);
         }
     },
 
@@ -282,7 +338,7 @@ export const commands: Commands = {
     skip: {
         description: '⏭️ 現在の曲をスキップ',
         options: [],
-        execute: async (interaction: CommandInteraction, bot: Bot) => {
+        execute: async (interaction: CommandInteraction | ButtonInteraction, bot: Bot) => {
             if (!interaction.guildId) return;
 
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
@@ -292,6 +348,13 @@ export const commands: Commands = {
             }
 
             bot.player.stop();
+            updatePlayerButton(bot);
+
+            if (interaction.isButton()) {
+                interaction.deferUpdate();
+                return;
+            }
+
             notificationReply(interaction, '⏭️ 再生中の楽曲をスキップしました。');
         }
     },

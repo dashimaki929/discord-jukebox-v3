@@ -28,6 +28,9 @@ client.on('interactionCreate', interaction => {
     if (interaction.isCommand() || interaction.isButton() || interaction.isModalSubmit()) {
         const name = interaction.isCommand() ? interaction.commandName : interaction.customId;
 
+        const [guild, user] = [interaction.guild, interaction.user];
+        console.log('[INFO]', `<guild name="${guild?.name}" id="${guild?.id}">`, `<user name="${user.displayName}" id="${user.id}">`, `<command name="${name}">`);
+
         let bot = bots[interaction.guildId];
         if (!bot && name === 'connect') {
             bot = new Bot(interaction.guildId);
@@ -50,7 +53,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
             if (bot.isPlaying && memberCount === 0) {
                 bot.player.pause();
                 bot.isPlaying = false;
-                console.log('[INFO]', '⏯ 接続中のボイスチャンネル内にユーザーがいないため一時停止します。');        
+                console.log('[INFO]', '⏯ 接続中のボイスチャンネル内にユーザーがいないため一時停止します。');
             }
         }
     }
@@ -62,7 +65,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
             if (!bot.isPlaying) {
                 bot.player.unpause();
                 bot.isPlaying = true;
-                console.log('[INFO]', '⏯ ユーザーがボイスチャンネルに接続したため再生を開始します。');    
+                console.log('[INFO]', '⏯ ユーザーがボイスチャンネルに接続したため再生を開始します。');
             }
         }
     }
