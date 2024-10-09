@@ -22,11 +22,10 @@ const ffmpegPath = ffmpegStatic as unknown as string;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
-import { COLORS, DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
+import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
 import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
 
 export class Bot {
-    static DEFAULT_PLAYLIST: string[] = readFile('./config/playlist.txt').split(/\r?\n/);
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
 
     guildId: string;
@@ -39,6 +38,7 @@ export class Bot {
     volume: number;
     isPlaying: boolean;
     isShuffle: boolean;
+    isLoop: boolean;
     messages: Map<string, Message | InteractionResponse>;
 
     spotifyApi: SpotifyWebApi;
@@ -46,8 +46,8 @@ export class Bot {
 
     constructor(guildId: string) {
         this.guildId = guildId;
-        this.playlist = Bot.DEFAULT_PLAYLIST.filter(Boolean);
-        this.currentPlaylistTitle = 'Default Playlist';
+        this.playlist = [];
+        this.currentPlaylistTitle = '';
         this.currentPlaylistUrl = '';
         this.musicQueue = [];
         this.currentMusic = '';
@@ -55,6 +55,7 @@ export class Bot {
         this.volume = DEFAULT_VOLUME;
         this.isPlaying = false;
         this.isShuffle = false;
+        this.isLoop = false;
         this.messages = new Map();
 
         this.initMusicQueue(true);
@@ -72,10 +73,7 @@ export class Bot {
         });
         this.player.on(AudioPlayerStatus.Playing, () => { this.isPlaying = true });
         this.player.on(AudioPlayerStatus.Paused, () => { this.isPlaying = false });
-        this.player.on(AudioPlayerStatus.Idle, () => {
-            this.play();
-            removeCache(this.currentMusic);
-        });
+        this.player.on(AudioPlayerStatus.Idle, () => { this.play() });
         this.player.on('error', (e) => {
             console.log(
                 '[WARN]',
@@ -106,13 +104,14 @@ export class Bot {
         // pre-download next music.
         while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
             const hash = this.#getNextMusicHash();
-            console.log('[INFO]', 'Skip for song that are banned:', `${URLS.YOUTUBE}?v=${hash}`);
+            console.log('[INFO]', 'BANされている音楽のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
+            console.log('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
         }
         this.download(this.musicQueue[0]);
     }
 
     async #stream(): Promise<internal.Readable | undefined> {
-        const hash = this.#getNextMusicHash();
+        const hash = this.isLoop ? this.currentMusic : this.#getNextMusicHash();
         if (!hash) return;
 
         this.currentMusic = hash;
@@ -127,6 +126,10 @@ export class Bot {
     }
 
     download(hash: string): Promise<string> {
+        if (!this.isLoop) {
+            removeCache(this.currentMusic);
+        }
+
         return new Promise((resolve, reject) => {
             if (!hash) {
                 hash = this.#getNextMusicHash();
@@ -179,16 +182,14 @@ export class Bot {
             info.videoDetails.title,
             info.videoDetails.video_url,
             info.videoDetails.author.name,
-            info.videoDetails.keywords || [],
+            info.videoDetails.keywords?.slice(0, 10) || [],
             info.videoDetails.thumbnails.pop()?.url! as string,
-        ]
-
+        ];
 
         message.edit({
             embeds: [
                 new EmbedBuilder()
-                    .setColor(COLORS.SECONDARY)
-                    .setAuthor({ name: 'Jukebox', iconURL: 'attachment://icon.png' })
+                    .setAuthor({ name: 'Jukebox v3.0.0', iconURL: 'attachment://icon.webp', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                     .setTitle('再生中の音楽情報')
                     .setThumbnail(authorImage)
                     .addFields({
@@ -203,7 +204,7 @@ export class Bot {
                     .setImage(thumbnail)
             ],
             files: [
-                { attachment: './img/icon.png', name: 'icon.png' },
+                { attachment: './img/icon.webp', name: 'icon.webp' },
             ]
         });
     }

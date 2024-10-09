@@ -22,7 +22,7 @@ client.once('ready', async () => {
     console.log('Bot "discord-jukebox-v3" has successfully started!');
 });
 
-client.on('interactionCreate', interaction => {
+client.on('interactionCreate', async interaction => {
     if (!interaction.guildId) return;
 
     if (interaction.isCommand() || interaction.isButton() || interaction.isModalSubmit()) {
@@ -37,7 +37,7 @@ client.on('interactionCreate', interaction => {
         }
 
         bots[interaction.guildId] ??= bot;
-        commands[name].execute(interaction, bot);
+        await commands[name].execute(interaction, bot);
 
         if (name === 'disconnect') delete bots[interaction.guildId];
     }

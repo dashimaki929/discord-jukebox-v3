@@ -142,10 +142,11 @@ export async function updatePlayerButton(bot: Bot): Promise<void> {
     message.edit({
         components: [
             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('shuffle').setEmoji(bot.isShuffle ? '🔃' : '🔀').setLabel(bot.isShuffle ? 'ランダムOFF' : 'ランダムON').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('pause').setEmoji(bot.isPlaying ? '⏸' : '▶️').setLabel(bot.isPlaying ? '停止' : '再開').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('skip').setEmoji('⏭️').setLabel('スキップ').setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('disconnect').setEmoji('🛑').setLabel('切断').setStyle(ButtonStyle.Danger),
+                new ButtonBuilder().setCustomId('loop').setEmoji('1293585939490279424').setStyle(bot.isLoop ? ButtonStyle.Success : ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('shuffle').setEmoji('1293585943621537893').setStyle(bot.isShuffle ? ButtonStyle.Success : ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('pause').setEmoji(bot.isPlaying ? '1293585941067337751' : '1293585946633306304').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('skip').setEmoji('1293585945093738496').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('disconnect').setEmoji('1293585937833656453').setStyle(ButtonStyle.Danger),
             )
         ]
     });

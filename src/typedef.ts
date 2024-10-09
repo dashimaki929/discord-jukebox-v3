@@ -17,7 +17,7 @@ export type Commands = {
 export type Command = {
     description: string;
     options: CommandOption[];
-    execute(interaction: CommandInteraction | ButtonInteraction | ModalSubmitInteraction, bot: Bot): void;
+    execute(interaction: CommandInteraction | ButtonInteraction | ModalSubmitInteraction, bot: Bot): Promise<void>;
 }
 
 export type CommandOption = {
