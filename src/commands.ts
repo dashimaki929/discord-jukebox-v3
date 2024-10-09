@@ -92,8 +92,7 @@ export const commands: Commands = {
                     channel.send({
                         embeds: [
                             new EmbedBuilder()
-                                .setColor(COLORS.SECONDARY)
-                                .setAuthor({ name: 'Jukebox', iconURL: 'attachment://icon.png' })
+                                .setAuthor({ name: 'Jukebox v3.0.0', iconURL: 'attachment://icon.webp', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                                 .setTitle('音楽をロード中...')
                                 .setThumbnail('attachment://download.gif')
                                 .addFields({
@@ -105,16 +104,17 @@ export const commands: Commands = {
                                 .setImage('attachment://loading.gif')
                         ],
                         files: [
-                            new AttachmentBuilder('./img/icon.png').setName('icon.png'),
+                            new AttachmentBuilder('./img/icon.webp').setName('icon.webp'),
                             new AttachmentBuilder('./img/download.gif').setName('download.gif'),
                             new AttachmentBuilder('./img/loading.gif').setName('loading.gif'),
                         ],
                         components: [
                             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                                new ButtonBuilder().setCustomId('shuffle').setEmoji('🔀').setLabel('ランダムON').setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder().setCustomId('pause').setEmoji('⏸').setLabel('停止').setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder().setCustomId('skip').setEmoji('⏭️').setLabel('スキップ').setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder().setCustomId('disconnect').setEmoji('🛑').setLabel('切断').setStyle(ButtonStyle.Danger),
+                                new ButtonBuilder().setCustomId('loop').setEmoji('1293585939490279424').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('shuffle').setEmoji('1293585943621537893').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('pause').setEmoji('1293585941067337751').setStyle(ButtonStyle.Primary),
+                                new ButtonBuilder().setCustomId('skip').setEmoji('1293585945093738496').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('disconnect').setEmoji('1293585937833656453').setStyle(ButtonStyle.Danger),
                             )
                         ],
                     }).then(msg => bot.messages.set('player', msg));
@@ -259,6 +259,34 @@ export const commands: Commands = {
             bot.download(bot.musicQueue[0]);
 
             notificationReply(interaction, ['🎵 楽曲をキューに追加しました。', video.url].join('\n'));
+        }
+    },
+
+    /**
+     * loop Command
+     *     Used for toggles between looping.
+     */
+    loop: {
+        description: '🔁 ループ再生モードの切り替え',
+        options: [],
+        execute: async (interaction: CommandInteraction | ButtonInteraction, bot: Bot) => {
+            if (!interaction.guildId) return;
+
+            const voiceConnection = getVoiceConnections().get(interaction.guildId);
+            if (!voiceConnection) {
+                notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            bot.isLoop = !bot.isLoop;
+            updatePlayerButton(bot);
+
+            if (interaction.isButton()) {
+                interaction.deferUpdate();
+                return;
+            }
+
+            notificationReply(interaction, `🔁 ループ再生が ${bot.isLoop ? 'ON' : 'OFF'} になりました。`);
         }
     },
 
