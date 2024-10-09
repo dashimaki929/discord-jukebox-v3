@@ -85,32 +85,31 @@ export const commands: Commands = {
                     adapterCreator: interaction.guild.voiceAdapterCreator,
                 });
 
-                const playlist = await yts({ listId: PLAYLISTS[0].hash });
-                bot.playlist = playlist.videos.map(v => v.videoId);
-                bot.currentPlaylistTitle = playlist.title;
-                bot.currentPlaylistUrl = playlist.url;
-                bot.initMusicQueue();
-
-                bot.play();
+                if (!bot.playlist.length) {
+                    const playlist = await yts({ listId: PLAYLISTS[0].hash });
+                    bot.playlist = playlist.videos.map(v => v.videoId);
+                    bot.currentPlaylistTitle = playlist.title;
+                    bot.currentPlaylistUrl = playlist.url;
+                    bot.initMusicQueue();    
+                    bot.play();
+                }
 
                 const channel = await interaction.guild.channels.fetch(interaction.channelId ?? '');
-                if (channel?.isTextBased()) {
+                if (!bot.messages.get('player') && channel?.isTextBased()) {
                     channel.send({
                         embeds: [
                             new EmbedBuilder()
-                                .setAuthor({ name: 'Jukebox v3.0.0', iconURL: 'attachment://icon.webp', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
+                                .setAuthor({ name: 'Jukebox - v3.0.0', iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                                 .setTitle('音楽をロード中...')
                                 .setThumbnail('attachment://download.gif')
                                 .addFields({
                                     name: 'プレイリスト',
-                                    value: bot.currentPlaylistUrl
-                                        ? `[${bot.currentPlaylistTitle}](${bot.currentPlaylistUrl})`
-                                        : `\`${bot.currentPlaylistTitle}\``
+                                    value: `***[${bot.currentPlaylistTitle}](${bot.currentPlaylistUrl})***`
                                 })
                                 .setImage('attachment://loading.gif')
                         ],
                         files: [
-                            new AttachmentBuilder('./img/icon.webp').setName('icon.webp'),
+                            new AttachmentBuilder('./img/icon.png').setName('icon.png'),
                             new AttachmentBuilder('./img/download.gif').setName('download.gif'),
                             new AttachmentBuilder('./img/loading.gif').setName('loading.gif'),
                         ],
