@@ -202,9 +202,11 @@ export const commands: Commands = {
         options: [
             new SlashCommandStringOption()
                 .setName('playlist')
+                .setDescription('プレイリストを選択')
+                .addChoices(...PLAYLISTS.map(playlist => { return { name: playlist.title, value: playlist.hash } })),
+            new SlashCommandStringOption()
+                .setName('url')
                 .setDescription('プレイリストのURLを入力')
-                .setRequired(true)
-                .addChoices(...PLAYLISTS.map(playlist => { return { name: playlist.title, value: playlist.hash } }))
         ],
         execute: async (interaction: CommandInteraction, bot: Bot) => {
             if (!interaction.guildId) return;
@@ -215,10 +217,10 @@ export const commands: Commands = {
                 return;
             }
 
-            const url = interaction.options.get('playlist')?.value! as string;
-            const hash = url.match(/PL[\w-]{32}/);
+            const param = interaction.options.get('playlist')?.value! as string || interaction.options.get('url')?.value! as string;
+            const hash = param.match(/PL[\w-]{32}/);
             if (!hash) {
-                notificationReply(interaction, '❌ プレイリストのURLが正しくありません。');
+                notificationReply(interaction, '❌ プレイリストを指定してください。');
                 return;
             }
 
