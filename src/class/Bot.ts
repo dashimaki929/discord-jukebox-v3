@@ -189,22 +189,19 @@ export class Bot {
         message.edit({
             embeds: [
                 new EmbedBuilder()
-                    .setAuthor({ name: 'Jukebox v3.0.0', iconURL: 'attachment://icon.webp', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
-                    .setTitle('再生中の音楽情報')
+                    .setAuthor({ name: 'Jukebox - v3.0.0', iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                     .setThumbnail(authorImage)
                     .addFields({
                         name: 'プレイリスト',
-                        value: this.currentPlaylistUrl
-                            ? `[${this.currentPlaylistTitle}](${this.currentPlaylistUrl})`
-                            : `\`${this.currentPlaylistTitle}\``
+                        value: `***[${this.currentPlaylistTitle}](${this.currentPlaylistUrl})***`
                     })
-                    .addFields({ name: 'タイトル', value: `[${title}](${url})` })
-                    .addFields({ name: 'アーティスト', value: artist })
-                    .addFields({ name: '関連キーワード', value: keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし' })
+                    .addFields({ name: 'タイトル', value: `***[${title}](${url})***` })
+                    .addFields({ name: 'アーティスト', value: `__***${artist}***__` })
+                    .addFields({ name: '関連キーワード', value: `${keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし'}` })
                     .setImage(thumbnail)
             ],
             files: [
-                { attachment: './img/icon.webp', name: 'icon.webp' },
+                { attachment: './img/icon.png', name: 'icon.png' },
             ]
         });
     }
