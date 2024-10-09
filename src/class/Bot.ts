@@ -141,16 +141,16 @@ export class Bot {
                 console.log('[INFO]', 'Download:', url);
 
                 const stream = ytdl(url, { filter: 'audioonly' }).on('error', error => {
-                    let reason;
-                    if (error.message.includes('only available to Music Premium members')) {
-                        reason = 'Youtubeプレミアム限定のコンテンツです。';
+                    if (error.message.includes('Premium members')) {
+                        this.addBanlist(hash, 'Youtubeプレミアム限定のコンテンツです。');
                     } else if (error.message.includes('confirm your age')) {
-                        reason = '年齢確認の必要なコンテンツです。';
+                        this.addBanlist(hash, '年齢確認の必要なコンテンツです。');
+                    } else if (error.message.includes('Premieres in')) {
+                        console.log('[INFO]', 'プレミア公開待ちのコンテンツです。', url);
                     } else {
-                        reason = '利用できないコンテンツです。';
+                        this.addBanlist(hash, '利用できないコンテンツです。');
                     }
 
-                    this.addBanlist(hash, reason);
                     this.#getNextMusicHash() // skip next music.
 
                     return this.download(this.musicQueue[0]);
@@ -215,7 +215,8 @@ export class Bot {
         Bot.BANNED_HASH_LIST[hash] = { reason, bannedAt: new Date };
         writeFile('./config/banlist.json', JSON.stringify(Bot.BANNED_HASH_LIST, null, '\t'));
 
-        console.log('[INFO]', 'Added to ban list:', `${URLS.YOUTUBE}?v=${hash}`);
+        console.log('[INFO]', 'BANリストに追加しました:', `${URLS.YOUTUBE}?v=${hash}`);
+        console.log('[INFO]', '理由:', reason);
     }
 
     #getNextMusicHash(): string {
