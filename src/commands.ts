@@ -22,7 +22,7 @@ import yts from 'yt-search';
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
 import { deleteMessageFromKey, notificationReply, shuffle, updatePlayerButton } from './common/util.js';
-import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, URLS } from './common/constants.js';
+import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, PLAYLISTS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
     /**
@@ -84,6 +84,12 @@ export const commands: Commands = {
                     guildId: interaction.guildId,
                     adapterCreator: interaction.guild.voiceAdapterCreator,
                 });
+
+                const playlist = await yts({ listId: PLAYLISTS[0].hash });
+                bot.playlist = playlist.videos.map(v => v.videoId);
+                bot.currentPlaylistTitle = playlist.title;
+                bot.currentPlaylistUrl = playlist.url;
+                bot.initMusicQueue();
 
                 bot.play();
 
@@ -198,6 +204,7 @@ export const commands: Commands = {
                 .setName('playlist')
                 .setDescription('プレイリストのURLを入力')
                 .setRequired(true)
+                .addChoices(...PLAYLISTS.map(playlist => { return { name: playlist.title, value: playlist.hash } }))
         ],
         execute: async (interaction: CommandInteraction, bot: Bot) => {
             if (!interaction.guildId) return;

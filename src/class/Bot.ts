@@ -26,7 +26,6 @@ import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
 import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
 
 export class Bot {
-    static DEFAULT_PLAYLIST: string[] = readFile('./config/playlist.txt').split(/\r?\n/);
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
 
     guildId: string;
@@ -47,8 +46,8 @@ export class Bot {
 
     constructor(guildId: string) {
         this.guildId = guildId;
-        this.playlist = Bot.DEFAULT_PLAYLIST.filter(Boolean);
-        this.currentPlaylistTitle = 'Default Playlist';
+        this.playlist = [];
+        this.currentPlaylistTitle = '';
         this.currentPlaylistUrl = '';
         this.musicQueue = [];
         this.currentMusic = '';
