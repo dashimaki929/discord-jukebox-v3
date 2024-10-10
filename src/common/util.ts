@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
 
-import { Commands, Command, BotSetting } from '../typedef.js';
+import { Commands, Command, BotSetting, MessageProps } from '../typedef.js';
 import { Bot } from '../class/Bot.js';
 import { MESSAGE_DELETE_TIMEOUT_MS } from './constants.js';
 
@@ -56,7 +56,7 @@ export function writeFile(filepath: string, content: string): void {
  * 
  * @param ignoreFileName 
  */
-export function removeCache(ignoreFileName: string): void {
+export function removeCache(ignoreFileName: string = ''): void {
     const cacheDir = './mp3/cache';
 
     const files = readdirSync(cacheDir);
@@ -69,6 +69,16 @@ export function removeCache(ignoreFileName: string): void {
             console.error('ファイルの削除に失敗しました:', filepath, error);
         }
     });
+}
+
+/**
+ * Get version information from package.json
+ * 
+ * @returns 
+ */
+export function getVersionInfo(): string {
+    const packageJson = JSON.parse(readFile('./package.json'));
+    return `${packageJson.name} / ver${packageJson.version}`;
 }
 
 /**
@@ -103,14 +113,48 @@ export async function registSlashCommands(commands: Commands, setting: BotSettin
 }
 
 /**
- * Delete previous replies from MessageKey
+ * Update message from key
+ * 
+ * @param bot 
+ * @param key 
+ * @param messageProps 
+ */
+export async function updateMessagefFromKey(bot: Bot, key: string, messageProps: MessageProps): Promise<void> {
+    try {
+        const message = bot.messages.get(key);
+        await message?.fetch();
+
+        if (message) {
+            await message.edit({ ...messageProps });
+        }
+    } catch (error: any) {
+        if (error.code !== 10008) {
+            // with the exception of DiscordAPIError: Unknown Message
+            console.error('[ERROR]', 'メッセージの編集に失敗しました:', key, error);
+        }
+    }
+}
+
+/**
+ * Delete previous replies from key
  * 
  * @param bot 
  * @param key 
  */
 export async function deleteMessageFromKey(bot: Bot, key: string): Promise<void> {
-    const message = bot.messages.get(key);
-    if (message) await message.delete().then(() => bot.messages.delete(key));
+    try {
+        const message = bot.messages.get(key);
+        await message?.fetch();
+
+        if (message) {
+            await message.delete().then(() => bot.messages.delete(key));
+        }
+    } catch (error: any) {
+        if (error.code !== 10008) {
+            // with the exception of DiscordAPIError: Unknown Message
+            console.error('[ERROR]', 'メッセージの削除に失敗しました:', key, error);
+        }
+    }
 }
 
 /**
@@ -120,7 +164,7 @@ export async function deleteMessageFromKey(bot: Bot, key: string): Promise<void>
  * @param content 
  */
 export async function notificationReply(interaction: CommandInteraction | ButtonInteraction | ModalSubmitInteraction, content: string, deleteTimeoutMS: number = MESSAGE_DELETE_TIMEOUT_MS): Promise<void> {
-    console.log('[INFO]', content);
+    console.info('[INFO]', content);
 
     await interaction.reply({ content, ephemeral: true }).then(msg => {
         setTimeout(() => {
@@ -135,17 +179,14 @@ export async function notificationReply(interaction: CommandInteraction | Button
  * @param bot 
  * @returns 
  */
-export async function updatePlayerButton(bot: Bot): Promise<void> {
-    const message = bot.messages.get('player');
-    if (!message) return;
-
-    message.edit({
+export function updatePlayerButton(bot: Bot): void {
+    updateMessagefFromKey(bot, 'player', {
         components: [
             new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder().setCustomId('loop').setEmoji('1293585939490279424').setStyle(bot.isLoop ? ButtonStyle.Success : ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('shuffle').setEmoji('1293585943621537893').setStyle(bot.isShuffle ? ButtonStyle.Success : ButtonStyle.Secondary),
-                new ButtonBuilder().setCustomId('pause').setEmoji(bot.isPlaying ? '1293585941067337751' : '1293585946633306304').setStyle(ButtonStyle.Primary),
-                new ButtonBuilder().setCustomId('skip').setEmoji('1293585945093738496').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('loop').setEmoji('1293585939490279424').setStyle(bot.isLoop ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(bot.isAutoPause),
+                new ButtonBuilder().setCustomId('shuffle').setEmoji('1293585943621537893').setStyle(bot.isShuffle ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(bot.isAutoPause),
+                new ButtonBuilder().setCustomId('pause').setEmoji(bot.isPlaying ? '1293585941067337751' : '1293585946633306304').setStyle(ButtonStyle.Primary).setDisabled(bot.isAutoPause),
+                new ButtonBuilder().setCustomId('skip').setEmoji('1293585945093738496').setStyle(ButtonStyle.Secondary).setDisabled(bot.isAutoPause),
                 new ButtonBuilder().setCustomId('disconnect').setEmoji('1293585937833656453').setStyle(ButtonStyle.Danger),
             )
         ]

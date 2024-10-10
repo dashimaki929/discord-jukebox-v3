@@ -23,12 +23,13 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
-import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
+import { getVersionInfo, readFile, removeCache, shuffle, updateMessagefFromKey, updatePlayerButton, writeFile } from "../common/util.js";
 
 export class Bot {
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
 
     guildId: string;
+    voiceChannelId: string;
     playlist: string[];
     currentPlaylistTitle: string;
     currentPlaylistUrl: string;
@@ -39,6 +40,7 @@ export class Bot {
     isPlaying: boolean;
     isShuffle: boolean;
     isLoop: boolean;
+    isAutoPause: boolean;
     messages: Map<string, Message | InteractionResponse>;
 
     spotifyApi: SpotifyWebApi;
@@ -46,6 +48,7 @@ export class Bot {
 
     constructor(guildId: string) {
         this.guildId = guildId;
+        this.voiceChannelId = '';
         this.playlist = [];
         this.currentPlaylistTitle = '';
         this.currentPlaylistUrl = '';
@@ -56,6 +59,7 @@ export class Bot {
         this.isPlaying = false;
         this.isShuffle = false;
         this.isLoop = false;
+        this.isAutoPause = true;
         this.messages = new Map();
 
         this.initMusicQueue(true);
@@ -98,14 +102,20 @@ export class Bot {
         });
         this.audioResource.volume?.setVolume(this.volume);
 
+        await this.#updatePlayerInfo(this.currentMusic);
+
         this.player.play(this.audioResource);
-        this.#updatePlayerInfo(this.currentMusic);
+        if (this.isAutoPause) {
+            this.player.pause();
+        }
+
+        updatePlayerButton(this);
 
         // pre-download next music.
         while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
             const hash = this.#getNextMusicHash();
-            console.log('[INFO]', 'BANされている音楽のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
-            console.log('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
+            console.info('[INFO]', 'BANされている楽曲のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
+            console.info('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
         }
         this.download(this.musicQueue[0]);
     }
@@ -138,7 +148,7 @@ export class Bot {
             const url = `${URLS.YOUTUBE}?v=${hash}`;
             const filepath = `./mp3/cache/${hash}.mp3`;
             if (!existsSync(filepath)) {
-                console.log('[INFO]', 'Download:', url);
+                console.debug('[DEBUG]', 'download:', url);
 
                 const stream = ytdl(url, { filter: 'audioonly' }).on('error', error => {
                     if (error.message.includes('Premium members')) {
@@ -146,7 +156,7 @@ export class Bot {
                     } else if (error.message.includes('confirm your age')) {
                         this.addBanlist(hash, '年齢確認の必要なコンテンツです。');
                     } else if (error.message.includes('Premieres in')) {
-                        console.log('[INFO]', 'プレミア公開待ちのコンテンツです。', url);
+                        console.info('[INFO]', 'プレミア公開待ちのコンテンツです。', url);
                     } else {
                         this.addBanlist(hash, '利用できないコンテンツです。');
                     }
@@ -173,9 +183,6 @@ export class Bot {
     }
 
     async #updatePlayerInfo(hash: string): Promise<void> {
-        const message = this.messages.get('player');
-        if (!message) return;
-
         const info = await ytdl.getBasicInfo(`${URLS.YOUTUBE}?v=${hash}`);
         const [authorImage, title, url, artist, keywords, thumbnail] = [
             info.videoDetails.author.thumbnails?.pop()?.url! as string,
@@ -186,10 +193,10 @@ export class Bot {
             info.videoDetails.thumbnails.pop()?.url! as string,
         ];
 
-        message.edit({
+        await updateMessagefFromKey(this, 'player', {
             embeds: [
                 new EmbedBuilder()
-                    .setAuthor({ name: 'Jukebox - v3.0.0', iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
+                    .setAuthor({ name: getVersionInfo(), iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                     .setThumbnail(authorImage)
                     .addFields({
                         name: 'プレイリスト',
@@ -212,8 +219,8 @@ export class Bot {
         Bot.BANNED_HASH_LIST[hash] = { reason, bannedAt: new Date };
         writeFile('./config/banlist.json', JSON.stringify(Bot.BANNED_HASH_LIST, null, '\t'));
 
-        console.log('[INFO]', 'BANリストに追加しました:', `${URLS.YOUTUBE}?v=${hash}`);
-        console.log('[INFO]', '理由:', reason);
+        console.info('[INFO]', 'BANリストに追加しました:', `${URLS.YOUTUBE}?v=${hash}`);
+        console.info('[INFO]', '理由:', reason);
     }
 
     #getNextMusicHash(): string {

@@ -1,4 +1,4 @@
-import { CommandInteraction, ButtonInteraction, ModalSubmitInteraction } from 'discord.js';
+import { CommandInteraction, ButtonInteraction, ModalSubmitInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import { Bot } from './class/Bot.js';
 
 export type Bots = {
@@ -32,4 +32,12 @@ export interface BANLIST {
         reason: string,
         bannedAt: Date,
     }
+}
+
+export interface MessageProps {
+    content?: string;
+    embeds?: EmbedBuilder[];
+    files?: { attachment: string, name: string }[];
+    components?: ActionRowBuilder<ButtonBuilder>[];
+    ephemeral?: boolean;
 }

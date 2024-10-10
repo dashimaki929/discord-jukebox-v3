@@ -6,7 +6,7 @@ import { ActivityType, Client, GatewayIntentBits } from 'discord.js';
 import { commands } from './commands.js';
 import { Bots, BotSetting } from './typedef.js';
 import { Bot } from './class/Bot.js';
-import { registSlashCommands } from './common/util.js';
+import { registSlashCommands, updatePlayerButton } from './common/util.js';
 
 const settings: BotSetting = { id: process.env.DISCORD_BOT_ID || '', token: process.env.DISCORD_BOT_TOKEN || '' };
 const bots: Bots = {};
@@ -29,7 +29,7 @@ client.on('interactionCreate', async interaction => {
         const name = interaction.isCommand() ? interaction.commandName : interaction.customId;
 
         const [guild, user] = [interaction.guild, interaction.user];
-        console.log('[INFO]', `<guild name="${guild?.name}" id="${guild?.id}">`, `<user name="${user.displayName}" id="${user.id}">`, `<command name="${name}">`);
+        console.info('[INFO]', `<guild name="${guild?.name}" id="${guild?.id}">`, `<user name="${user.displayName}" id="${user.id}">`, `<command name="${name}" type="${interaction.type}">`);
 
         let bot = bots[interaction.guildId];
         if (!bot && name === 'connect') {
@@ -52,9 +52,10 @@ client.on('voiceStateUpdate', (oldState, newState) => {
             const memberCount = oldState.channel.members.filter(m => !m.user.bot).size;
             if (bot.isPlaying && memberCount === 0) {
                 bot.player.pause();
-                bot.isPlaying = false;
-                console.log('[INFO]', '⏯ 接続中のボイスチャンネル内にユーザーがいないため一時停止します。');
+                bot.isAutoPause = true;
+                console.info('[INFO]', '⏯ 接続中のボイスチャンネル内にユーザーがいないため自動停止します。');
             }
+            updatePlayerButton(bot);
         }
     }
     if (newState.channel) {
@@ -62,10 +63,12 @@ client.on('voiceStateUpdate', (oldState, newState) => {
         const botJoiningVoiceChannel = newState.guild.members.me?.voice.channel;
         if (botJoiningVoiceChannel && botJoiningVoiceChannel.id === newState.channel.id) {
             const bot = bots[newState.channel.guild.id];
-            if (!bot.isPlaying) {
+            const memberCount = newState.channel.members.filter(m => !m.user.bot).size;
+            if (memberCount > 0) {
                 bot.player.unpause();
-                bot.isPlaying = true;
-                console.log('[INFO]', '⏯ ユーザーがボイスチャンネルに接続したため再生を開始します。');
+                bot.isAutoPause = false;
+                updatePlayerButton(bot);
+                console.info('[INFO]', '⏯ ユーザーがボイスチャンネルに接続したため再生を開始します。');
             }
         }
     }
