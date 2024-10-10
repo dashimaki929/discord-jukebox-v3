@@ -15,13 +15,14 @@ import {
     ButtonStyle,
     TextInputStyle,
     AttachmentBuilder,
+    GuildMember,
 } from 'discord.js';
 import { getVoiceConnections, joinVoiceChannel } from '@discordjs/voice';
 import yts from 'yt-search';
 
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
-import { deleteMessageFromKey, notificationReply, shuffle, updatePlayerButton } from './common/util.js';
+import { deleteMessageFromKey, getVersionInfo, notificationReply, removeCache, shuffle, updatePlayerButton } from './common/util.js';
 import { COLORS, ICONS, IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, PLAYLISTS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
@@ -45,13 +46,18 @@ export const commands: Commands = {
 
             try {
                 const code = interaction.options.get('code')?.value! as string;
-                const result = new Function(`"use strict"; return (async () => { ${code} })()`)();
-                interaction.reply({
-                    content: ['```json', JSON.stringify(result).substring(0, 1900), '```'].join('\n'),
-                    ephemeral: true,
-                });
+                const context = JSON.stringify(eval(code), null, '  ');
+                if (context.length < 1000) {
+                    interaction.reply({ content: ['```json', context, '```'].join('\n'), ephemeral: true });
+                } else {
+                    const buffer = Buffer.from(context, 'utf8');
+                    await interaction.reply({
+                        files: [new AttachmentBuilder(buffer).setName(`debug_${new Date().toLocaleString().replace(/[^\d]/g, '')}.json`)],
+                        ephemeral: true,
+                    });
+                }
             } catch (error) {
-                notificationReply(interaction, ['```', error, '```'].join('\n'));
+                notificationReply(interaction, ['```', error, '```'].join('\n'), IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS);
             }
         }
     },
@@ -84,13 +90,16 @@ export const commands: Commands = {
                     guildId: interaction.guildId,
                     adapterCreator: interaction.guild.voiceAdapterCreator,
                 });
+                bot.voiceChannelId = channelId;
 
                 if (!bot.playlist.length) {
+                    await removeCache();
+
                     const playlist = await yts({ listId: PLAYLISTS[0].hash });
                     bot.playlist = playlist.videos.map(v => v.videoId);
                     bot.currentPlaylistTitle = playlist.title;
                     bot.currentPlaylistUrl = playlist.url;
-                    bot.initMusicQueue();    
+                    bot.initMusicQueue();
                     bot.play();
                 }
 
@@ -99,8 +108,8 @@ export const commands: Commands = {
                     channel.send({
                         embeds: [
                             new EmbedBuilder()
-                                .setAuthor({ name: 'Jukebox - v3.0.0', iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
-                                .setTitle('音楽をロード中...')
+                                .setAuthor({ name: getVersionInfo(), iconURL: URLS.ICON, url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
+                                .setTitle('楽曲をロード中...')
                                 .setThumbnail('attachment://download.gif')
                                 .addFields({
                                     name: 'プレイリスト',
@@ -109,18 +118,8 @@ export const commands: Commands = {
                                 .setImage('attachment://loading.gif')
                         ],
                         files: [
-                            new AttachmentBuilder('./img/icon.png').setName('icon.png'),
                             new AttachmentBuilder('./img/download.gif').setName('download.gif'),
                             new AttachmentBuilder('./img/loading.gif').setName('loading.gif'),
-                        ],
-                        components: [
-                            new ActionRowBuilder<ButtonBuilder>().addComponents(
-                                new ButtonBuilder().setCustomId('loop').setEmoji('1293585939490279424').setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder().setCustomId('shuffle').setEmoji('1293585943621537893').setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder().setCustomId('pause').setEmoji('1293585941067337751').setStyle(ButtonStyle.Primary),
-                                new ButtonBuilder().setCustomId('skip').setEmoji('1293585945093738496').setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder().setCustomId('disconnect').setEmoji('1293585937833656453').setStyle(ButtonStyle.Danger),
-                            )
                         ],
                     }).then(msg => bot.messages.set('player', msg));
                 }
@@ -145,6 +144,12 @@ export const commands: Commands = {
                 return;
             }
 
+            bot.audioResource?.playStream.destroy();
+            bot.audioResource = null;
+
+            clearInterval(bot.timeouts.get('player'));
+            clearTimeout(bot.timeouts.get('timesignal'));
+            
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (voiceConnection) {
                 voiceConnection.destroy();
@@ -162,7 +167,7 @@ export const commands: Commands = {
      *      Used for add music to the queue.
      */
     play: {
-        description: '🎵 Youtube から動画を指定して音楽を再生',
+        description: '🎵 Youtube から動画を指定して楽曲を再生',
         options: [
             new SlashCommandStringOption()
                 .setName('play')
@@ -286,6 +291,12 @@ export const commands: Commands = {
                 return;
             }
 
+            const member = interaction.member as GuildMember;
+            if (member.voice.channelId !== bot.voiceChannelId) {
+                notificationReply(interaction, '❌ 同じボイスチャンネル内で実行してください。');
+                return;
+            }
+
             bot.isLoop = !bot.isLoop;
             updatePlayerButton(bot);
 
@@ -311,6 +322,12 @@ export const commands: Commands = {
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (!voiceConnection) {
                 notificationReply(interaction, '❌ 接続中のボイスチャンネルが存在しません。');
+                return;
+            }
+
+            const member = interaction.member as GuildMember;
+            if (member.voice.channelId !== bot.voiceChannelId) {
+                notificationReply(interaction, '❌ 同じボイスチャンネル内で実行してください。');
                 return;
             }
 
@@ -347,12 +364,18 @@ export const commands: Commands = {
                 return;
             }
 
+            const member = interaction.member as GuildMember;
+            if (member.voice.channelId !== bot.voiceChannelId) {
+                notificationReply(interaction, '❌ 同じボイスチャンネル内で実行してください。');
+                return;
+            }
+
             let content = '';
             if (bot.isPlaying) {
-                bot.player.pause();
+                bot.audioPlayer.pause();
                 content = '⏯ 再生中の楽曲を一時停止しました。';
             } else {
-                bot.player.unpause();
+                bot.audioPlayer.unpause();
                 content = '⏯ 一時停止中の楽曲を再開しました。';
             }
 
@@ -383,8 +406,13 @@ export const commands: Commands = {
                 return;
             }
 
-            bot.player.stop();
-            updatePlayerButton(bot);
+            const member = interaction.member as GuildMember;
+            if (member.voice.channelId !== bot.voiceChannelId) {
+                notificationReply(interaction, '❌ 同じボイスチャンネル内で実行してください。');
+                return;
+            }
+
+            bot.audioPlayer.stop();
 
             if (interaction.isButton()) {
                 interaction.deferUpdate();
@@ -407,8 +435,14 @@ export const commands: Commands = {
                 return;
             }
 
+            const member = interaction.member as GuildMember;
+            if (member.voice.channelId !== bot.voiceChannelId) {
+                notificationReply(interaction, '❌ 同じボイスチャンネル内で実行してください。');
+                return;
+            }
+
             if (!bot.currentMusic) {
-                notificationReply(interaction, '❌ 再生中の音楽がありません。');
+                notificationReply(interaction, '❌ 再生中の楽曲がありません。');
                 return;
             }
 

@@ -49,6 +49,8 @@ $ npm -v
 -   fluent-ffmpeg
 -   nodemon
 -   opusscript
+-   rimraf
+    > ファイル削除用ライブラリ（管理者権限削除）
 -   spotify-web-api-node
     > Spotify Web API 実行用ライブラリ
 -   tsx

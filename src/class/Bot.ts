@@ -1,5 +1,4 @@
-import internal from "stream";
-import { createReadStream, existsSync } from "fs";
+import { existsSync } from "fs";
 
 import { EmbedBuilder, InteractionResponse, Message } from "discord.js";
 import {
@@ -23,40 +22,54 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
-import { readFile, removeCache, shuffle, writeFile } from "../common/util.js";
+import { formatTime, getVersionInfo, readFile, removeCache, setElapsedTime, shuffle, updateMessageFromKey, updatePlayerButton, writeFile } from "../common/util.js";
 
 export class Bot {
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
 
+    messages: Map<string, Message | InteractionResponse>;
+    timeouts: Map<string, NodeJS.Timeout>
+
     guildId: string;
+    voiceChannelId: string;
     playlist: string[];
     currentPlaylistTitle: string;
     currentPlaylistUrl: string;
     musicQueue: string[];
     currentMusic: string;
     audioResource: AudioResource | null;
+    pausedTime: number;
+    lengthSeconds: number;
     volume: number;
     isPlaying: boolean;
     isShuffle: boolean;
     isLoop: boolean;
-    messages: Map<string, Message | InteractionResponse>;
+    isAutoPause: boolean;
+    isTimeSignal: boolean;
 
     spotifyApi: SpotifyWebApi;
-    player: AudioPlayer;
+    audioPlayer: AudioPlayer;
 
     constructor(guildId: string) {
+        this.messages = new Map();
+        this.timeouts = new Map();
+
         this.guildId = guildId;
+        this.voiceChannelId = '';
         this.playlist = [];
         this.currentPlaylistTitle = '';
         this.currentPlaylistUrl = '';
         this.musicQueue = [];
         this.currentMusic = '';
         this.audioResource = null;
+        this.pausedTime = 0;
+        this.lengthSeconds = 0;
         this.volume = DEFAULT_VOLUME;
         this.isPlaying = false;
         this.isShuffle = false;
         this.isLoop = false;
-        this.messages = new Map();
+        this.isAutoPause = true;
+        this.isTimeSignal = false;
 
         this.initMusicQueue(true);
 
@@ -66,15 +79,36 @@ export class Bot {
             redirectUri: process.env.SPOTIFY_REDIRECT_URL
         });
 
-        this.player = createAudioPlayer({
+        this.audioPlayer = createAudioPlayer({
             behaviors: {
                 noSubscriber: NoSubscriberBehavior.Pause,
             }
         });
-        this.player.on(AudioPlayerStatus.Playing, () => { this.isPlaying = true });
-        this.player.on(AudioPlayerStatus.Paused, () => { this.isPlaying = false });
-        this.player.on(AudioPlayerStatus.Idle, () => { this.play() });
-        this.player.on('error', (e) => {
+        this.audioPlayer.on(AudioPlayerStatus.Playing, () => {
+            this.isPlaying = true;
+            if (!this.isTimeSignal) {
+                this.timeouts.set('player', setElapsedTime(this));
+                this.timeouts.set('timesignal', this.#setTimeSignal());
+            }
+        });
+        this.audioPlayer.on(AudioPlayerStatus.Paused, () => {
+            this.isPlaying = false;
+            clearInterval(this.timeouts.get('player'));
+            clearTimeout(this.timeouts.get('timesignal'));
+        });
+        this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
+            this.play();
+            
+            if (this.isTimeSignal) {
+                this.isTimeSignal = false;
+            } else {
+                this.pausedTime = 0;
+            }
+
+            clearInterval(this.timeouts.get('player'));
+            clearTimeout(this.timeouts.get('timesignal'));
+        });
+        this.audioPlayer.on('error', (e) => {
             console.log(
                 '[WARN]',
                 `${e.message} with resource ${e.resource.metadata}`
@@ -83,51 +117,43 @@ export class Bot {
         });
     }
 
-    async play(): Promise<void> {
+    async play(filepath?: string): Promise<void> {
         const con = getVoiceConnections().get(this.guildId);
         if (!con) return;
 
-        con.subscribe(this.player);
+        con.subscribe(this.audioPlayer);
 
-        const stream = await this.#stream();
-        if (!stream) return;
+        if (!filepath) {
+            const hash = this.isLoop ? this.currentMusic : this.#getNextMusicHash();
+            this.currentMusic = hash;
 
-        this.audioResource = createAudioResource(stream, {
-            inputType: StreamType.WebmOpus,
-            inlineVolume: true,
-        });
+            filepath = await this.download(hash);
+        }
+
+        this.audioResource = createAudioResource(filepath, { inputType: StreamType.WebmOpus, inlineVolume: true });
         this.audioResource.volume?.setVolume(this.volume);
 
-        this.player.play(this.audioResource);
-        this.#updatePlayerInfo(this.currentMusic);
+        await this.#updatePlayerInfo(this.currentMusic);  
+
+        this.audioPlayer.play(this.audioResource);
+        if (this.isAutoPause) this.audioPlayer.pause();
+
+        updatePlayerButton(this);
 
         // pre-download next music.
         while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
             const hash = this.#getNextMusicHash();
-            console.log('[INFO]', 'BANされている音楽のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
-            console.log('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
+            console.info('[INFO]', 'BANされている楽曲のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
+            console.info('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
         }
-        this.download(this.musicQueue[0]);
+        this.download(this.musicQueue[0], this.pausedTime);
     }
 
-    async #stream(): Promise<internal.Readable | undefined> {
-        const hash = this.isLoop ? this.currentMusic : this.#getNextMusicHash();
-        if (!hash) return;
-
-        this.currentMusic = hash;
-
-        try {
-            const filepath = await this.download(hash);
-            return createReadStream(filepath);
-        } catch (e) {
-            console.log('[WARN]', e);
-            return this.#stream();
-        }
-    }
-
-    download(hash: string): Promise<string> {
-        if (!this.isLoop) {
-            removeCache(this.currentMusic);
+    async download(hash: string, startTime: number = 0): Promise<string> {
+        if (this.isTimeSignal && startTime) {
+            await removeCache();
+        } else if (!this.isLoop) {
+            await removeCache(this.currentMusic);
         }
 
         return new Promise((resolve, reject) => {
@@ -138,7 +164,7 @@ export class Bot {
             const url = `${URLS.YOUTUBE}?v=${hash}`;
             const filepath = `./mp3/cache/${hash}.mp3`;
             if (!existsSync(filepath)) {
-                console.log('[INFO]', 'Download:', url);
+                console.debug('[DEBUG]', 'download:', url);
 
                 const stream = ytdl(url, { filter: 'audioonly' }).on('error', error => {
                     if (error.message.includes('Premium members')) {
@@ -146,7 +172,7 @@ export class Bot {
                     } else if (error.message.includes('confirm your age')) {
                         this.addBanlist(hash, '年齢確認の必要なコンテンツです。');
                     } else if (error.message.includes('Premieres in')) {
-                        console.log('[INFO]', 'プレミア公開待ちのコンテンツです。', url);
+                        console.info('[INFO]', 'プレミア公開待ちのコンテンツです。', url);
                     } else {
                         this.addBanlist(hash, '利用できないコンテンツです。');
                     }
@@ -158,6 +184,7 @@ export class Bot {
 
                 ffmpeg(stream).audioBitrate(128)
                     .format('mp3')
+                    .setStartTime(this.isTimeSignal ? startTime : 0)
                     .audioFilter('dynaudnorm') // loudnorm vs dynaudnorm ...?
                     .on('end', () => {
                         resolve(filepath);
@@ -173,9 +200,6 @@ export class Bot {
     }
 
     async #updatePlayerInfo(hash: string): Promise<void> {
-        const message = this.messages.get('player');
-        if (!message) return;
-
         const info = await ytdl.getBasicInfo(`${URLS.YOUTUBE}?v=${hash}`);
         const [authorImage, title, url, artist, keywords, thumbnail] = [
             info.videoDetails.author.thumbnails?.pop()?.url! as string,
@@ -186,10 +210,11 @@ export class Bot {
             info.videoDetails.thumbnails.pop()?.url! as string,
         ];
 
-        message.edit({
+        this.lengthSeconds = Number(info.videoDetails.lengthSeconds);
+        await updateMessageFromKey(this, 'player', {
             embeds: [
                 new EmbedBuilder()
-                    .setAuthor({ name: 'Jukebox - v3.0.0', iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
+                    .setAuthor({ name: getVersionInfo(), iconURL: URLS.ICON, url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                     .setThumbnail(authorImage)
                     .addFields({
                         name: 'プレイリスト',
@@ -199,10 +224,9 @@ export class Bot {
                     .addFields({ name: 'アーティスト', value: `__***${artist}***__` })
                     .addFields({ name: '関連キーワード', value: `${keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし'}` })
                     .setImage(thumbnail)
+                    .setFooter({ text: `${formatTime(this.pausedTime)} / ${formatTime(this.lengthSeconds)}` })
             ],
-            files: [
-                { attachment: './img/icon.png', name: 'icon.png' },
-            ]
+            files: []
         });
     }
 
@@ -212,8 +236,8 @@ export class Bot {
         Bot.BANNED_HASH_LIST[hash] = { reason, bannedAt: new Date };
         writeFile('./config/banlist.json', JSON.stringify(Bot.BANNED_HASH_LIST, null, '\t'));
 
-        console.log('[INFO]', 'BANリストに追加しました:', `${URLS.YOUTUBE}?v=${hash}`);
-        console.log('[INFO]', '理由:', reason);
+        console.info('[INFO]', 'BANリストに追加しました:', `${URLS.YOUTUBE}?v=${hash}`);
+        console.info('[INFO]', '理由:', reason);
     }
 
     #getNextMusicHash(): string {
@@ -235,5 +259,21 @@ export class Bot {
         } else {
             this.musicQueue = [...this.playlist];
         }
+    }
+
+    #setTimeSignal(): NodeJS.Timeout {
+        const nextTimeSignalDate = new Date();
+        nextTimeSignalDate.setHours(nextTimeSignalDate.getHours() + 1);
+        nextTimeSignalDate.setMinutes(0);
+        nextTimeSignalDate.setSeconds(-4);
+        nextTimeSignalDate.setMilliseconds(0);
+
+        return setTimeout(async () => {
+            this.audioPlayer.pause();
+            this.pausedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime; 
+            this.musicQueue.unshift(this.currentMusic);
+            this.isTimeSignal = true;
+            this.play('./mp3/timesignal.mp3');
+        }, Number(nextTimeSignalDate) - Number(new Date()));
     }
 }
