@@ -93,7 +93,7 @@ export const commands: Commands = {
                 bot.voiceChannelId = channelId;
 
                 if (!bot.playlist.length) {
-                    removeCache();
+                    await removeCache();
 
                     const playlist = await yts({ listId: PLAYLISTS[0].hash });
                     bot.playlist = playlist.videos.map(v => v.videoId);
@@ -146,6 +146,9 @@ export const commands: Commands = {
 
             bot.audioResource?.playStream.destroy();
             bot.audioResource = null;
+
+            clearInterval(bot.timeouts.get('player'));
+            clearTimeout(bot.timeouts.get('timesignal'));
             
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (voiceConnection) {
@@ -369,10 +372,10 @@ export const commands: Commands = {
 
             let content = '';
             if (bot.isPlaying) {
-                bot.player.pause();
+                bot.audioPlayer.pause();
                 content = '⏯ 再生中の楽曲を一時停止しました。';
             } else {
-                bot.player.unpause();
+                bot.audioPlayer.unpause();
                 content = '⏯ 一時停止中の楽曲を再開しました。';
             }
 
@@ -409,7 +412,7 @@ export const commands: Commands = {
                 return;
             }
 
-            bot.player.stop();
+            bot.audioPlayer.stop();
 
             if (interaction.isButton()) {
                 interaction.deferUpdate();

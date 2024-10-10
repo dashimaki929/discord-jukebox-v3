@@ -51,7 +51,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
             const bot = bots[oldState.channel.guild.id];
             const memberCount = oldState.channel.members.filter(m => !m.user.bot).size;
             if (bot.isPlaying && memberCount === 0) {
-                bot.player.pause();
+                bot.audioPlayer.pause();
                 bot.isAutoPause = true;
                 console.info('[INFO]', '⏯ 接続中のボイスチャンネル内にユーザーがいないため自動停止します。');
             }
@@ -65,7 +65,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
             const bot = bots[newState.channel.guild.id];
             const memberCount = newState.channel.members.filter(m => !m.user.bot).size;
             if (memberCount > 0) {
-                bot.player.unpause();
+                bot.audioPlayer.unpause();
                 bot.isAutoPause = false;
                 updatePlayerButton(bot);
                 console.info('[INFO]', '⏯ ユーザーがボイスチャンネルに接続したため再生を開始します。');

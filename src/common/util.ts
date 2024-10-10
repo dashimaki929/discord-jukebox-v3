@@ -1,5 +1,7 @@
-import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync } from 'fs';
+
 import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, EmbedBuilder, Message, ModalSubmitInteraction, REST, Routes } from 'discord.js';
+import { rimraf } from 'rimraf'
 
 import { Commands, Command, BotSetting, MessageProps } from '../typedef.js';
 import { Bot } from '../class/Bot.js';
@@ -56,19 +58,22 @@ export function writeFile(filepath: string, content: string): void {
  * 
  * @param ignoreFileName 
  */
-export function removeCache(ignoreFileName: string = ''): void {
+export async function removeCache(ignoreHash: string = ''): Promise<void> {
     const cacheDir = './mp3/cache';
 
     const files = readdirSync(cacheDir);
-    const muscis = files.filter(f => f.endsWith('.mp3'));
-    muscis.filter(m => m.split('.')[0] !== ignoreFileName).forEach(m => {
+    const musics = files.filter(f => f.endsWith('.mp3'));
+
+    for await (const m of musics) {
+        if (m.split('.')[0] === ignoreHash) continue;
+        
         const filepath = `${cacheDir}/${m}`;
         try {
-            unlinkSync(filepath);
+            await rimraf(filepath)
         } catch (error) {
             console.error('ファイルの削除に失敗しました:', filepath, error);
         }
-    });
+    }
 }
 
 /**
@@ -199,15 +204,13 @@ export function updatePlayerButton(bot: Bot): void {
  * @param bot 
  */
 export function setElapsedTime(bot: Bot): NodeJS.Timeout {
-    return setInterval(() => {
-        const elapsedTime = bot.audioResource?.playbackDuration;
-        if (!elapsedTime) return;
-
+    return setInterval(() => {        
         const message = bot.messages.get('player')! as Message;
         if (!message) return;
-
+        
+        const elapsedTime = ((bot.audioResource?.playbackDuration || 0) / 1000) + bot.pausedTime;
         updateMessageFromKey(bot, 'player', {
-            embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime / 1000)} / ${formatTime(bot.lengthSeconds)}` })]
+            embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime)} / ${formatTime(bot.lengthSeconds)}` })]
         });
     }, 1000)
 }

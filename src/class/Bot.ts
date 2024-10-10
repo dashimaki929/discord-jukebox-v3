@@ -1,5 +1,4 @@
-import internal from "stream";
-import { createReadStream, existsSync } from "fs";
+import { existsSync } from "fs";
 
 import { EmbedBuilder, InteractionResponse, Message } from "discord.js";
 import {
@@ -29,7 +28,7 @@ export class Bot {
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
 
     messages: Map<string, Message | InteractionResponse>;
-    intervals: Map<string, NodeJS.Timeout>
+    timeouts: Map<string, NodeJS.Timeout>
 
     guildId: string;
     voiceChannelId: string;
@@ -39,19 +38,21 @@ export class Bot {
     musicQueue: string[];
     currentMusic: string;
     audioResource: AudioResource | null;
+    pausedTime: number;
     lengthSeconds: number;
     volume: number;
     isPlaying: boolean;
     isShuffle: boolean;
     isLoop: boolean;
     isAutoPause: boolean;
+    isTimeSignal: boolean;
 
     spotifyApi: SpotifyWebApi;
-    player: AudioPlayer;
+    audioPlayer: AudioPlayer;
 
     constructor(guildId: string) {
         this.messages = new Map();
-        this.intervals = new Map();
+        this.timeouts = new Map();
 
         this.guildId = guildId;
         this.voiceChannelId = '';
@@ -61,12 +62,14 @@ export class Bot {
         this.musicQueue = [];
         this.currentMusic = '';
         this.audioResource = null;
+        this.pausedTime = 0;
         this.lengthSeconds = 0;
         this.volume = DEFAULT_VOLUME;
         this.isPlaying = false;
         this.isShuffle = false;
         this.isLoop = false;
         this.isAutoPause = true;
+        this.isTimeSignal = false;
 
         this.initMusicQueue(true);
 
@@ -76,24 +79,36 @@ export class Bot {
             redirectUri: process.env.SPOTIFY_REDIRECT_URL
         });
 
-        this.player = createAudioPlayer({
+        this.audioPlayer = createAudioPlayer({
             behaviors: {
                 noSubscriber: NoSubscriberBehavior.Pause,
             }
         });
-        this.player.on(AudioPlayerStatus.Playing, () => { 
+        this.audioPlayer.on(AudioPlayerStatus.Playing, () => {
             this.isPlaying = true;
-            this.intervals.set('player', setElapsedTime(this));
+            if (!this.isTimeSignal) {
+                this.timeouts.set('player', setElapsedTime(this));
+                this.timeouts.set('timesignal', this.#setTimeSignal());
+            }
         });
-        this.player.on(AudioPlayerStatus.Paused, () => { 
+        this.audioPlayer.on(AudioPlayerStatus.Paused, () => {
             this.isPlaying = false;
-            clearInterval(this.intervals.get('player')!);
+            clearInterval(this.timeouts.get('player'));
+            clearTimeout(this.timeouts.get('timesignal'));
         });
-        this.player.on(AudioPlayerStatus.Idle, () => {
+        this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
             this.play();
-            clearInterval(this.intervals.get('player')!);
+            
+            if (this.isTimeSignal) {
+                this.isTimeSignal = false;
+            } else {
+                this.pausedTime = 0;
+            }
+
+            clearInterval(this.timeouts.get('player'));
+            clearTimeout(this.timeouts.get('timesignal'));
         });
-        this.player.on('error', (e) => {
+        this.audioPlayer.on('error', (e) => {
             console.log(
                 '[WARN]',
                 `${e.message} with resource ${e.resource.metadata}`
@@ -102,25 +117,26 @@ export class Bot {
         });
     }
 
-    async play(): Promise<void> {
+    async play(filepath?: string): Promise<void> {
         const con = getVoiceConnections().get(this.guildId);
         if (!con) return;
 
-        con.subscribe(this.player);
+        con.subscribe(this.audioPlayer);
 
-        const stream = await this.#stream();
-        if (!stream) return;
+        if (!filepath) {
+            const hash = this.isLoop ? this.currentMusic : this.#getNextMusicHash();
+            this.currentMusic = hash;
 
-        this.audioResource = createAudioResource(stream, {
-            inputType: StreamType.WebmOpus,
-            inlineVolume: true,
-        });
+            filepath = await this.download(hash);
+        }
+
+        this.audioResource = createAudioResource(filepath, { inputType: StreamType.WebmOpus, inlineVolume: true });
         this.audioResource.volume?.setVolume(this.volume);
 
-        await this.#updatePlayerInfo(this.currentMusic);
+        await this.#updatePlayerInfo(this.currentMusic);  
 
-        this.player.play(this.audioResource);
-        if (this.isAutoPause) this.player.pause();
+        this.audioPlayer.play(this.audioResource);
+        if (this.isAutoPause) this.audioPlayer.pause();
 
         updatePlayerButton(this);
 
@@ -130,27 +146,14 @@ export class Bot {
             console.info('[INFO]', 'BANされている楽曲のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
             console.info('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
         }
-        this.download(this.musicQueue[0]);
+        this.download(this.musicQueue[0], this.pausedTime);
     }
 
-    async #stream(): Promise<internal.Readable | undefined> {
-        const hash = this.isLoop ? this.currentMusic : this.#getNextMusicHash();
-        if (!hash) return;
-
-        this.currentMusic = hash;
-
-        try {
-            const filepath = await this.download(hash);
-            return createReadStream(filepath);
-        } catch (e) {
-            console.log('[WARN]', e);
-            return this.#stream();
-        }
-    }
-
-    download(hash: string): Promise<string> {
-        if (!this.isLoop) {
-            removeCache(this.currentMusic);
+    async download(hash: string, startTime: number = 0): Promise<string> {
+        if (this.isTimeSignal && startTime) {
+            await removeCache();
+        } else if (!this.isLoop) {
+            await removeCache(this.currentMusic);
         }
 
         return new Promise((resolve, reject) => {
@@ -181,6 +184,7 @@ export class Bot {
 
                 ffmpeg(stream).audioBitrate(128)
                     .format('mp3')
+                    .setStartTime(this.isTimeSignal ? startTime : 0)
                     .audioFilter('dynaudnorm') // loudnorm vs dynaudnorm ...?
                     .on('end', () => {
                         resolve(filepath);
@@ -220,7 +224,7 @@ export class Bot {
                     .addFields({ name: 'アーティスト', value: `__***${artist}***__` })
                     .addFields({ name: '関連キーワード', value: `${keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし'}` })
                     .setImage(thumbnail)
-                    .setFooter({ text: `${formatTime(0)} / ${formatTime(this.lengthSeconds)}` })
+                    .setFooter({ text: `${formatTime(this.pausedTime)} / ${formatTime(this.lengthSeconds)}` })
             ],
             files: []
         });
@@ -255,5 +259,21 @@ export class Bot {
         } else {
             this.musicQueue = [...this.playlist];
         }
+    }
+
+    #setTimeSignal(): NodeJS.Timeout {
+        const nextTimeSignalDate = new Date();
+        nextTimeSignalDate.setHours(nextTimeSignalDate.getHours() + 1);
+        nextTimeSignalDate.setMinutes(0);
+        nextTimeSignalDate.setSeconds(-4);
+        nextTimeSignalDate.setMilliseconds(0);
+
+        return setTimeout(async () => {
+            this.audioPlayer.pause();
+            this.pausedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime; 
+            this.musicQueue.unshift(this.currentMusic);
+            this.isTimeSignal = true;
+            this.play('./mp3/timesignal.mp3');
+        }, Number(nextTimeSignalDate) - Number(new Date()));
     }
 }
