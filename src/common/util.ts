@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
-import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, ModalSubmitInteraction, REST, Routes } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, CommandInteraction, EmbedBuilder, Message, ModalSubmitInteraction, REST, Routes } from 'discord.js';
 
 import { Commands, Command, BotSetting, MessageProps } from '../typedef.js';
 import { Bot } from '../class/Bot.js';
@@ -119,7 +119,7 @@ export async function registSlashCommands(commands: Commands, setting: BotSettin
  * @param key 
  * @param messageProps 
  */
-export async function updateMessagefFromKey(bot: Bot, key: string, messageProps: MessageProps): Promise<void> {
+export async function updateMessageFromKey(bot: Bot, key: string, messageProps: MessageProps): Promise<void> {
     try {
         const message = bot.messages.get(key);
         await message?.fetch();
@@ -180,7 +180,7 @@ export async function notificationReply(interaction: CommandInteraction | Button
  * @returns 
  */
 export function updatePlayerButton(bot: Bot): void {
-    updateMessagefFromKey(bot, 'player', {
+    updateMessageFromKey(bot, 'player', {
         components: [
             new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder().setCustomId('loop').setEmoji('1293585939490279424').setStyle(bot.isLoop ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(bot.isAutoPause),
@@ -191,4 +191,37 @@ export function updatePlayerButton(bot: Bot): void {
             )
         ]
     });
+}
+
+/**
+ * set elapsed time at embed footer.
+ * 
+ * @param bot 
+ */
+export function setElapsedTime(bot: Bot): NodeJS.Timeout {
+    return setInterval(() => {
+        const elapsedTime = bot.audioResource?.playbackDuration;
+        if (!elapsedTime) return;
+
+        const message = bot.messages.get('player')! as Message;
+        if (!message) return;
+
+        updateMessageFromKey(bot, 'player', {
+            embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime / 1000)} / ${formatTime(bot.lengthSeconds)}` })]
+        });
+    }, 1000)
+}
+
+/**
+ * format time.
+ * 
+ * @param seconds 
+ * @returns 
+ */
+export function formatTime(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    const s = Math.floor(seconds % 60);
+
+    return `${h ? `${h}:` : ''}${m < 10 ? `0${m}` : m}:${s < 10 ? `0${s}` : s}`;
 }

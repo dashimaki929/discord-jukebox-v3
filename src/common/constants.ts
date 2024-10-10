@@ -6,6 +6,7 @@ export const ICONS = {
     SPOTIFY: 'https://storage.googleapis.com/spotifynewsroom-jp.appspot.com/1/2020/12/Spotify_Icon_CMYK_Green.png',
 }
 export const URLS = {
+    ICON: 'https://cdn.discordapp.com/app-icons/963520474040639488/231efbd5a7b4f85d4bd2629926dc3abb.png',
     YOUTUBE: 'https://www.youtube.com/watch',
 }
 export const INTERLUDES = ['EtqP2xVE4iY', 'WtRHih2nZxk', 'slt_Bav8nsQ', 'DkUIxAzxF6k', 'Cwj910TeKRQ'];

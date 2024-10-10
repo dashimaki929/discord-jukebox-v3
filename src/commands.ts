@@ -108,7 +108,7 @@ export const commands: Commands = {
                     channel.send({
                         embeds: [
                             new EmbedBuilder()
-                                .setAuthor({ name: getVersionInfo(), iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
+                                .setAuthor({ name: getVersionInfo(), iconURL: URLS.ICON, url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                                 .setTitle('楽曲をロード中...')
                                 .setThumbnail('attachment://download.gif')
                                 .addFields({
@@ -118,7 +118,6 @@ export const commands: Commands = {
                                 .setImage('attachment://loading.gif')
                         ],
                         files: [
-                            new AttachmentBuilder('./img/icon.png').setName('icon.png'),
                             new AttachmentBuilder('./img/download.gif').setName('download.gif'),
                             new AttachmentBuilder('./img/loading.gif').setName('loading.gif'),
                         ],

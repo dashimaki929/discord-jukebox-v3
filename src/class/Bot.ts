@@ -23,10 +23,13 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
-import { getVersionInfo, readFile, removeCache, shuffle, updateMessagefFromKey, updatePlayerButton, writeFile } from "../common/util.js";
+import { formatTime, getVersionInfo, readFile, removeCache, setElapsedTime, shuffle, updateMessageFromKey, updatePlayerButton, writeFile } from "../common/util.js";
 
 export class Bot {
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
+
+    messages: Map<string, Message | InteractionResponse>;
+    intervals: Map<string, NodeJS.Timeout>
 
     guildId: string;
     voiceChannelId: string;
@@ -36,17 +39,20 @@ export class Bot {
     musicQueue: string[];
     currentMusic: string;
     audioResource: AudioResource | null;
+    lengthSeconds: number;
     volume: number;
     isPlaying: boolean;
     isShuffle: boolean;
     isLoop: boolean;
     isAutoPause: boolean;
-    messages: Map<string, Message | InteractionResponse>;
 
     spotifyApi: SpotifyWebApi;
     player: AudioPlayer;
 
     constructor(guildId: string) {
+        this.messages = new Map();
+        this.intervals = new Map();
+
         this.guildId = guildId;
         this.voiceChannelId = '';
         this.playlist = [];
@@ -55,12 +61,12 @@ export class Bot {
         this.musicQueue = [];
         this.currentMusic = '';
         this.audioResource = null;
+        this.lengthSeconds = 0;
         this.volume = DEFAULT_VOLUME;
         this.isPlaying = false;
         this.isShuffle = false;
         this.isLoop = false;
         this.isAutoPause = true;
-        this.messages = new Map();
 
         this.initMusicQueue(true);
 
@@ -75,9 +81,18 @@ export class Bot {
                 noSubscriber: NoSubscriberBehavior.Pause,
             }
         });
-        this.player.on(AudioPlayerStatus.Playing, () => { this.isPlaying = true });
-        this.player.on(AudioPlayerStatus.Paused, () => { this.isPlaying = false });
-        this.player.on(AudioPlayerStatus.Idle, () => { this.play() });
+        this.player.on(AudioPlayerStatus.Playing, () => { 
+            this.isPlaying = true;
+            this.intervals.set('player', setElapsedTime(this));
+        });
+        this.player.on(AudioPlayerStatus.Paused, () => { 
+            this.isPlaying = false;
+            clearInterval(this.intervals.get('player')!);
+        });
+        this.player.on(AudioPlayerStatus.Idle, () => {
+            this.play();
+            clearInterval(this.intervals.get('player')!);
+        });
         this.player.on('error', (e) => {
             console.log(
                 '[WARN]',
@@ -105,9 +120,7 @@ export class Bot {
         await this.#updatePlayerInfo(this.currentMusic);
 
         this.player.play(this.audioResource);
-        if (this.isAutoPause) {
-            this.player.pause();
-        }
+        if (this.isAutoPause) this.player.pause();
 
         updatePlayerButton(this);
 
@@ -193,10 +206,11 @@ export class Bot {
             info.videoDetails.thumbnails.pop()?.url! as string,
         ];
 
-        await updateMessagefFromKey(this, 'player', {
+        this.lengthSeconds = Number(info.videoDetails.lengthSeconds);
+        await updateMessageFromKey(this, 'player', {
             embeds: [
                 new EmbedBuilder()
-                    .setAuthor({ name: getVersionInfo(), iconURL: 'attachment://icon.png', url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
+                    .setAuthor({ name: getVersionInfo(), iconURL: URLS.ICON, url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
                     .setThumbnail(authorImage)
                     .addFields({
                         name: 'プレイリスト',
@@ -206,10 +220,9 @@ export class Bot {
                     .addFields({ name: 'アーティスト', value: `__***${artist}***__` })
                     .addFields({ name: '関連キーワード', value: `${keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし'}` })
                     .setImage(thumbnail)
+                    .setFooter({ text: `${formatTime(0)} / ${formatTime(this.lengthSeconds)}` })
             ],
-            files: [
-                { attachment: './img/icon.png', name: 'icon.png' },
-            ]
+            files: []
         });
     }
 
