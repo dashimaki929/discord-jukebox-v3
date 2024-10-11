@@ -64,14 +64,16 @@ export async function removeCache(ignoreHash: string = ''): Promise<void> {
     const files = readdirSync(cacheDir);
     const musics = files.filter(f => f.endsWith('.mp3'));
 
-    musics.filter(m => m.split('.')[0] !== ignoreHash).forEach(async m => {
+    for await (const m of musics) {
+        if (m.split('.')[0] === ignoreHash) continue;
+        
         const filepath = `${cacheDir}/${m}`;
         try {
             await rimraf(filepath)
         } catch (error) {
             console.error('ファイルの削除に失敗しました:', filepath, error);
         }
-    });
+    }
 }
 
 /**
