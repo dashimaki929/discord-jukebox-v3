@@ -33,13 +33,12 @@ export class Bot {
     guildId: string;
     voiceChannelId: string;
     playlist: string[];
-    currentPlaylistTitle: string;
-    currentPlaylistUrl: string;
+    playlistTitle: string;
+    playlistUrl: string;
     musicQueue: string[];
     currentMusic: string;
     audioResource: AudioResource | null;
     pausedTime: number;
-    lengthSeconds: number;
     volume: number;
     isPlaying: boolean;
     isShuffle: boolean;
@@ -57,13 +56,12 @@ export class Bot {
         this.guildId = guildId;
         this.voiceChannelId = '';
         this.playlist = [];
-        this.currentPlaylistTitle = '';
-        this.currentPlaylistUrl = '';
+        this.playlistTitle = '';
+        this.playlistUrl = '';
         this.musicQueue = [];
         this.currentMusic = '';
         this.audioResource = null;
         this.pausedTime = 0;
-        this.lengthSeconds = 0;
         this.volume = DEFAULT_VOLUME;
         this.isPlaying = false;
         this.isShuffle = false;
@@ -87,13 +85,11 @@ export class Bot {
         this.audioPlayer.on(AudioPlayerStatus.Playing, () => {
             this.isPlaying = true;
             if (!this.isTimeSignal) {
-                this.timeouts.set('player', this.#setElapsedTime());
                 this.timeouts.set('timesignal', this.#setTimeSignal());
             }
         });
         this.audioPlayer.on(AudioPlayerStatus.Paused, () => {
             this.isPlaying = false;
-            clearTimeout(this.timeouts.get('player'));
             clearTimeout(this.timeouts.get('timesignal'));
         });
         this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
@@ -105,7 +101,6 @@ export class Bot {
                 this.pausedTime = 0;
             }
 
-            clearTimeout(this.timeouts.get('player'));
             clearTimeout(this.timeouts.get('timesignal'));
         });
         this.audioPlayer.on('error', (e) => {
@@ -201,16 +196,16 @@ export class Bot {
 
     async #updatePlayerInfo(hash: string): Promise<void> {
         const info = await ytdl.getBasicInfo(`${URLS.YOUTUBE}?v=${hash}`);
-        const [authorImage, title, url, artist, keywords, thumbnail] = [
+        const [authorImage, title, url, artist, keywords, thumbnail, lengthSeconds] = [
             info.videoDetails.author.thumbnails?.pop()?.url! as string,
             info.videoDetails.title,
             info.videoDetails.video_url,
             info.videoDetails.author.name,
             info.videoDetails.keywords?.slice(0, 10) || [],
             info.videoDetails.thumbnails.pop()?.url! as string,
+            Number(info.videoDetails.lengthSeconds)
         ];
 
-        this.lengthSeconds = Number(info.videoDetails.lengthSeconds);
         updateMessageFromKey(this, 'player', {
             embeds: [
                 new EmbedBuilder()
@@ -218,13 +213,13 @@ export class Bot {
                     .setThumbnail(authorImage)
                     .addFields({
                         name: 'プレイリスト',
-                        value: `***[${this.currentPlaylistTitle}](${this.currentPlaylistUrl})***`
+                        value: `***[${this.playlistTitle}](${this.playlistUrl})***`
                     })
                     .addFields({ name: 'タイトル', value: `***[${title}](${url})***` })
                     .addFields({ name: 'アーティスト', value: `__***${artist}***__` })
                     .addFields({ name: '関連キーワード', value: `${keywords.length ? `\`${keywords.join('` , `')}\`` : 'なし'}` })
                     .setImage(thumbnail)
-                    .setFooter({ text: `${formatTime(this.pausedTime)} / ${formatTime(this.lengthSeconds)}` })
+                    .setFooter({ text: formatTime(lengthSeconds) })
             ],
             files: []
         });
@@ -259,22 +254,6 @@ export class Bot {
         } else {
             this.musicQueue = [...this.playlist];
         }
-    }
-
-    #setElapsedTime(offsetMS: number = 0): NodeJS.Timeout {
-        return setTimeout(async () => {
-            const startTime = performance.now();
-
-            const message = this.messages.get('player')! as Message;
-            if (!message) return;
-
-            const elapsedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime;
-            await updateMessageFromKey(this, 'player', {
-                embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime)} / ${formatTime(this.lengthSeconds)}` })]
-            });
-
-            this.timeouts.set('player', this.#setElapsedTime(performance.now() - startTime));
-        }, 1000 - offsetMS)
     }
 
     #setTimeSignal(): NodeJS.Timeout {

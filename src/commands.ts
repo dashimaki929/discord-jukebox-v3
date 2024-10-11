@@ -97,8 +97,8 @@ export const commands: Commands = {
 
                     const playlist = await yts({ listId: PLAYLISTS[0].hash });
                     bot.playlist = playlist.videos.map(v => v.videoId);
-                    bot.currentPlaylistTitle = playlist.title;
-                    bot.currentPlaylistUrl = playlist.url;
+                    bot.playlistTitle = playlist.title;
+                    bot.playlistUrl = playlist.url;
                     bot.initMusicQueue();
                     bot.play();
                 }
@@ -113,7 +113,7 @@ export const commands: Commands = {
                                 .setThumbnail('attachment://download.gif')
                                 .addFields({
                                     name: 'プレイリスト',
-                                    value: `***[${bot.currentPlaylistTitle}](${bot.currentPlaylistUrl})***`
+                                    value: `***[${bot.playlistTitle}](${bot.playlistUrl})***`
                                 })
                                 .setImage('attachment://loading.gif')
                         ],
@@ -235,8 +235,8 @@ export const commands: Commands = {
             }
 
             bot.playlist = playlist.videos.map(v => v.videoId);
-            bot.currentPlaylistTitle = playlist.title;
-            bot.currentPlaylistUrl = playlist.url;
+            bot.playlistTitle = playlist.title;
+            bot.playlistUrl = playlist.url;
             bot.initMusicQueue();
             bot.download(bot.musicQueue[0]);
 
