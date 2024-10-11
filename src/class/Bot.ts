@@ -93,7 +93,7 @@ export class Bot {
         });
         this.audioPlayer.on(AudioPlayerStatus.Paused, () => {
             this.isPlaying = false;
-            clearInterval(this.timeouts.get('player'));
+            clearTimeout(this.timeouts.get('player'));
             clearTimeout(this.timeouts.get('timesignal'));
         });
         this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
@@ -105,7 +105,7 @@ export class Bot {
                 this.pausedTime = 0;
             }
 
-            clearInterval(this.timeouts.get('player'));
+            clearTimeout(this.timeouts.get('player'));
             clearTimeout(this.timeouts.get('timesignal'));
         });
         this.audioPlayer.on('error', (e) => {
@@ -261,18 +261,20 @@ export class Bot {
         }
     }
 
-    #setElapsedTime(): NodeJS.Timeout {
-        return setTimeout(() => {
+    #setElapsedTime(offsetMS: number = 0): NodeJS.Timeout {
+        return setTimeout(async () => {
+            const startTime = performance.now();
+
             const message = this.messages.get('player')! as Message;
             if (!message) return;
 
             const elapsedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime;
-            updateMessageFromKey(this, 'player', {
+            await updateMessageFromKey(this, 'player', {
                 embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime)} / ${formatTime(this.lengthSeconds)}` })]
             });
 
-            this.timeouts.set('player', this.#setElapsedTime());
-        }, 1000)
+            this.timeouts.set('player', this.#setElapsedTime(performance.now() - startTime));
+        }, 1000 - offsetMS)
     }
 
     #setTimeSignal(): NodeJS.Timeout {
