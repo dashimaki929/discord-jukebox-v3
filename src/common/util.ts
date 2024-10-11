@@ -64,16 +64,14 @@ export async function removeCache(ignoreHash: string = ''): Promise<void> {
     const files = readdirSync(cacheDir);
     const musics = files.filter(f => f.endsWith('.mp3'));
 
-    for await (const m of musics) {
-        if (m.split('.')[0] === ignoreHash) continue;
-        
+    musics.filter(m => m.split('.')[0] !== ignoreHash).forEach(async m => {
         const filepath = `${cacheDir}/${m}`;
         try {
             await rimraf(filepath)
         } catch (error) {
             console.error('ファイルの削除に失敗しました:', filepath, error);
         }
-    }
+    });
 }
 
 /**
@@ -196,23 +194,6 @@ export function updatePlayerButton(bot: Bot): void {
             )
         ]
     });
-}
-
-/**
- * set elapsed time at embed footer.
- * 
- * @param bot 
- */
-export function setElapsedTime(bot: Bot): NodeJS.Timeout {
-    return setInterval(() => {        
-        const message = bot.messages.get('player')! as Message;
-        if (!message) return;
-        
-        const elapsedTime = ((bot.audioResource?.playbackDuration || 0) / 1000) + bot.pausedTime;
-        updateMessageFromKey(bot, 'player', {
-            embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime)} / ${formatTime(bot.lengthSeconds)}` })]
-        });
-    }, 1000)
 }
 
 /**
