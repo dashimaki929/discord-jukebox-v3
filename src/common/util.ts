@@ -128,7 +128,7 @@ export async function updateMessageFromKey(bot: Bot, key: string, messageProps: 
         await message?.fetch();
 
         if (message) {
-            await message.edit({ ...messageProps });
+            message.edit({ ...messageProps }).then(message => bot.messages.set(key, message));
         }
     } catch (error: any) {
         if (error.code !== 10008) {

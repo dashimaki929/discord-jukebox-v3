@@ -1,6 +1,6 @@
 {
   "name": "discord-jukebox-v3",
-  "version": "3.12.2",
+  "version": "3.12.3",
   "description": "Discord Jukebox BOT🤖.  \r Running on Node.js (in TypeScript)",
   "main": "index.js",
   "type": "module",
