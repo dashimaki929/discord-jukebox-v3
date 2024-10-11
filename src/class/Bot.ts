@@ -22,7 +22,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
-import { formatTime, getVersionInfo, readFile, removeCache, setElapsedTime, shuffle, updateMessageFromKey, updatePlayerButton, writeFile } from "../common/util.js";
+import { formatTime, getVersionInfo, readFile, removeCache, shuffle, updateMessageFromKey, updatePlayerButton, writeFile } from "../common/util.js";
 
 export class Bot {
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
@@ -87,7 +87,7 @@ export class Bot {
         this.audioPlayer.on(AudioPlayerStatus.Playing, () => {
             this.isPlaying = true;
             if (!this.isTimeSignal) {
-                this.timeouts.set('player', setElapsedTime(this));
+                this.timeouts.set('player', this.#setElapsedTime());
                 this.timeouts.set('timesignal', this.#setTimeSignal());
             }
         });
@@ -98,7 +98,7 @@ export class Bot {
         });
         this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
             this.play();
-            
+
             if (this.isTimeSignal) {
                 this.isTimeSignal = false;
             } else {
@@ -133,7 +133,7 @@ export class Bot {
         this.audioResource = createAudioResource(filepath, { inputType: StreamType.WebmOpus, inlineVolume: true });
         this.audioResource.volume?.setVolume(this.volume);
 
-        await this.#updatePlayerInfo(this.currentMusic);  
+        await this.#updatePlayerInfo(this.currentMusic);
 
         this.audioPlayer.play(this.audioResource);
         if (this.isAutoPause) this.audioPlayer.pause();
@@ -211,7 +211,7 @@ export class Bot {
         ];
 
         this.lengthSeconds = Number(info.videoDetails.lengthSeconds);
-        await updateMessageFromKey(this, 'player', {
+        updateMessageFromKey(this, 'player', {
             embeds: [
                 new EmbedBuilder()
                     .setAuthor({ name: getVersionInfo(), iconURL: URLS.ICON, url: 'https://github.com/dashimaki929/discord-jukebox-v3' })
@@ -261,6 +261,20 @@ export class Bot {
         }
     }
 
+    #setElapsedTime(): NodeJS.Timeout {
+        return setTimeout(() => {
+            const message = this.messages.get('player')! as Message;
+            if (!message) return;
+
+            const elapsedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime;
+            updateMessageFromKey(this, 'player', {
+                embeds: [EmbedBuilder.from(message.embeds[0]).setFooter({ text: `${formatTime(elapsedTime)} / ${formatTime(this.lengthSeconds)}` })]
+            });
+
+            this.timeouts.set('player', this.#setElapsedTime());
+        }, 1000)
+    }
+
     #setTimeSignal(): NodeJS.Timeout {
         const nextTimeSignalDate = new Date();
         nextTimeSignalDate.setHours(nextTimeSignalDate.getHours() + 1);
@@ -270,7 +284,7 @@ export class Bot {
 
         return setTimeout(async () => {
             this.audioPlayer.pause();
-            this.pausedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime; 
+            this.pausedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime;
             this.musicQueue.unshift(this.currentMusic);
             this.isTimeSignal = true;
             this.play('./mp3/timesignal.mp3');
