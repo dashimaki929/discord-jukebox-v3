@@ -265,8 +265,8 @@ export class Bot {
 
         return setTimeout(async () => {
             this.audioPlayer.pause();
-            this.pausedTime = ((this.audioResource?.playbackDuration || 0) / 1000) + this.pausedTime;
             this.musicQueue.unshift(this.currentMusic);
+            this.pausedTime += ((this.audioResource?.playbackDuration || 0) / 1000);
             this.isTimeSignal = true;
             this.play('./mp3/timesignal.mp3');
         }, Number(nextTimeSignalDate) - Number(new Date()));
