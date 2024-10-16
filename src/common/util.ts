@@ -65,7 +65,7 @@ export async function removeCache(ignoreHash: string = ''): Promise<void> {
     const musics = files.filter(f => f.endsWith('.mp3'));
 
     for await (const m of musics) {
-        if (m.split('.')[0] === ignoreHash) continue;
+        if (m.split('.')[0].includes(ignoreHash)) continue;
         
         const filepath = `${cacheDir}/${m}`;
         try {

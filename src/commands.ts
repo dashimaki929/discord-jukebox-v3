@@ -149,7 +149,7 @@ export const commands: Commands = {
 
             clearInterval(bot.timeouts.get('player'));
             clearTimeout(bot.timeouts.get('timesignal'));
-            
+
             const voiceConnection = getVoiceConnections().get(interaction.guildId);
             if (voiceConnection) {
                 voiceConnection.destroy();
@@ -222,9 +222,12 @@ export const commands: Commands = {
             }
 
             const param = interaction.options.get('playlist')?.value! as string || interaction.options.get('url')?.value! as string;
-            const hash = param.match(/PL[\w-]{32}/);
+
+            const checksum = '[048AEIMQUYcgkosw]';
+            const exps = ['PL[\w-]{32}', `(O|RDC)LAK5uy_[\\w-]{32}${checksum}`];
+            const hash = param.match(new RegExp(exps.join('|')));
             if (!hash) {
-                notificationReply(interaction, '❌ プレイリストを指定してください。');
+                notificationReply(interaction, '❌ URLが正しくないか、無効なプレイリストです。');
                 return;
             }
 

@@ -180,7 +180,7 @@ export class Bot {
                 ffmpeg(stream).audioBitrate(128)
                     .format('mp3')
                     .setStartTime(this.isTimeSignal ? startTime : 0)
-                    .audioFilter('dynaudnorm') // loudnorm vs dynaudnorm ...?
+                    .audioFilter(['dynaudnorm', 'bass=g=5']) // loudnorm vs dynaudnorm ...?
                     .on('end', () => {
                         resolve(filepath);
                     })
