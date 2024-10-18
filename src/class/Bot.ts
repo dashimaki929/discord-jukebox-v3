@@ -11,7 +11,6 @@ import {
     NoSubscriberBehavior,
     StreamType
 } from "@discordjs/voice";
-import SpotifyWebApi from "spotify-web-api-node";
 import ytdl from "@distube/ytdl-core";
 
 import ffmpeg from 'fluent-ffmpeg';
@@ -46,7 +45,6 @@ export class Bot {
     isAutoPause: boolean;
     isTimeSignal: boolean;
 
-    spotifyApi: SpotifyWebApi;
     audioPlayer: AudioPlayer;
 
     constructor(guildId: string) {
@@ -70,12 +68,6 @@ export class Bot {
         this.isTimeSignal = false;
 
         this.initMusicQueue(true);
-
-        this.spotifyApi = new SpotifyWebApi({
-            clientId: process.env.SPOTIFY_CLIENT_ID,
-            clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-            redirectUri: process.env.SPOTIFY_REDIRECT_URL
-        });
 
         this.audioPlayer = createAudioPlayer({
             behaviors: {

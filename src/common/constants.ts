@@ -1,10 +1,7 @@
 export const DEFAULT_VOLUME = 0.05;
 export const MESSAGE_DELETE_TIMEOUT_MS = 5000;
 export const IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS = 60000;
-export const COLORS = { SPOTIFY: 0x2ebd59, ERROR: 0xed4245 };
-export const ICONS = {
-    SPOTIFY: 'https://storage.googleapis.com/spotifynewsroom-jp.appspot.com/1/2020/12/Spotify_Icon_CMYK_Green.png',
-}
+export const COLORS = { ERROR: 0xed4245 };
 export const URLS = {
     ICON: 'https://cdn.discordapp.com/app-icons/963520474040639488/231efbd5a7b4f85d4bd2629926dc3abb.png',
     YOUTUBE: 'https://www.youtube.com/watch',
@@ -13,6 +10,19 @@ export const INTERLUDES = ['EtqP2xVE4iY', 'WtRHih2nZxk', 'slt_Bav8nsQ', 'DkUIxAz
 export const PLAYLISTS = [
     { title: 'トップ 100 - 日本', hash: 'PL4fGSI1pDJn4-UIb6RKHdxam-oAUULIGB' },
     { title: 'トップ 100 - 世界', hash: 'PL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i' },
+    { title: '【BIG HITS】Japan music', hash: 'RDCLAK5uy_kDTLUEleq2B4vQB6JB5P1DApC4nRayHUs' },
+    { title: '【BIG HITS】J-Rock', hash: 'RDCLAK5uy_nwL5OO1y9H8qEuUiX_MKRADbyvpNMc_sc' },
+    { title: '【BIG HITS】アニメ', hash: 'RDCLAK5uy_nPxXg1gYFA4ZfQ0ke7N8ONHUPg5Ovr7AU' },
+    { title: '【BIG HITS】ボカロ', hash: 'RDCLAK5uy_mgu07-HoqLSU-WqjK2ldEQWLuPPm3CAy8' },
+    { title: '【BIG HITS】POP #1', hash: 'RDCLAK5uy_nmS3YoxSwVVQk9lEQJ0UX4ZCjXsW_psU8' },
+    { title: '【BIG HITS】POP #2', hash: 'RDCLAK5uy_k8QSlZPzi4R3781ftLrAKefTJJ6x7JrVA' },
+    { title: '【BIG HITS】POP #3', hash: 'RDCLAK5uy_nHSqCJjDrW9HBhCNdF6tWPdnOMngOv0wA' },
+    { title: '【BIG HITS】Rock', hash: 'RDCLAK5uy_k6CicQMBYujmwL9DB5xBripE9EfgeKpHM' },
+    { title: '【BIG HITS】Metal', hash: 'RDCLAK5uy_k59GXAlPBRGnPK4iQupnDUUI1AIz1t6QM' },
+    { title: '【BIG HITS】Jazz', hash: 'RDCLAK5uy_m7EF_vYZXBhXNuduyXmhT00DYapc8cobs' },
+    { title: '【BIG HITS】R&B', hash: 'RDCLAK5uy_kYUaBqUZxA0VpgN2xsHNUnVoLu8-JGXk8' },
+    { title: '【BIG HITS】Dance', hash: 'RDCLAK5uy_k6PkYWus1Mt-aKrbb0Ne8SkA2BgAk1Yy4' },
+    { title: '【BIG HITS】HIP HOP', hash: 'RDCLAK5uy_kP2172rQNb3KFXz880xp6M98R_ME5CIKA' },
     { title: '【J-POP】2024年のヒット曲', hash: 'PLHfGRdioXHaOFmzN9v8v9loX4ya34y4ba' },
     { title: '【J-POP】2023年のヒット曲', hash: 'PLFHmEH043xvwWqgQTRb7b823VyhlRuP1N' },
     { title: '【J-POP】2022年のヒット曲', hash: 'PLSArS342teRCmV0zjHMBy1SqqH-K-roxw' },
@@ -26,6 +36,16 @@ export const PLAYLISTS = [
     { title: '【NightCore】Nightcore Zodiac', hash: 'PLQQ3PSmQpBqOcRBZ-N0FzMXfxZUrTgqDC' },
     { title: '【NightCore】BoxBox Nightcore COMPLETE', hash: 'PLT5Nlf1NmV4Mqfha4j1YuCTk0GCL20bdN' },
     { title: '【東方】アレンジ', hash: 'PLbV-A4O8NMU1JtfJJYwM0_B9wdvNazqXs' },
+    { title: '【アニメ】アニソン！', hash: 'RDCLAK5uy_mRcc2Y3l-RoZsDt27qu8CBGpKt-5w7v8g' },
+    { title: '【アニメ】ロック', hash: 'RDCLAK5uy_nyVjRuJqKMLoRKxBdeMe3DMG6kOIOGM-Q' },
     { title: '【歌い手】歌ってみた', hash: 'PL9FFAA5YfNNbp7A9fvxf9qJYNjpLNK88P' },
-    { title: '【VOCALOID】歌ってみた', hash: 'PLaxlAA4N-JnRV1cN_gi_dMxtwkflXwlFn' },
+    { title: '【春】春ソングス', hash: 'RDCLAK5uy_lRj2PxRYIUGDG0p0KjsQ62d2lLYLfgXAw' },
+    { title: '【春】桜ソングス', hash: 'RDCLAK5uy_mqEdnDxpl4TNzmZ4QNIYttSHKj0F06zi8' },
+    { title: '【春】卒業ソング', hash: 'RDCLAK5uy_lkUXNQcp2lG5xUXlZAikmrsa-Ev3JkcdI' },
+    { title: '【夏】夏ソングス', hash: 'RDCLAK5uy_nJOq6dMNFDX35WtjgE0yRAFNLIXT0p6nw' },
+    { title: '【夏】夏夜ソング', hash: 'RDCLAK5uy_lT4lKP1LJ8krs_QgzKxA0eyU8pqjmrPq4' },
+    { title: '【秋】秋ソングス', hash: 'RDCLAK5uy_kIo7ENcKugr9X4-Csjb7vaqkNlbR7s_WU' },
+    { title: '【冬】冬ソングス', hash: 'RDCLAK5uy_m_sV4w3VvFZ1yNLW4gncnbddkamQILg04' },
+    { title: '【冬】クリスマス', hash: 'RDCLAK5uy_mvTa0vNT6iQSa0HxQm7XM-a8zmtwoKNus' },
+    { title: '【冬】バレンタイン', hash: 'RDCLAK5uy_lSPUAJCHapBRklMgyaVwf9FUxr687gVGE' },
 ];
