@@ -1,5 +1,3 @@
-import { randomUUID } from 'crypto';
-
 import {
     ButtonInteraction,
     CommandInteraction,
@@ -15,7 +13,7 @@ import yts from 'yt-search';
 
 import { Commands } from './typedef.js';
 import { Bot } from './class/Bot.js';
-import { deleteMessageFromKey, getVersionInfo, notificationReply, removeCache, shuffle, updatePlayerButton } from './common/util.js';
+import { deleteMessageFromKey, getVersionInfo, notificationReply, removeCache, shuffle, stripHashString, updatePlayerButton } from './common/util.js';
 import { IMPORTANT_MESSAGE_DELETE_TIMEOUT_MS, PLAYLISTS, URLS } from './common/constants.js';
 
 export const commands: Commands = {
@@ -294,6 +292,10 @@ export const commands: Commands = {
             }
 
             bot.isLoop = !bot.isLoop;
+            if (!bot.isLoop) {
+                bot.download(bot.musicQueue[0]);
+            }
+
             updatePlayerButton(bot);
 
             if (interaction.isButton()) {
@@ -419,6 +421,10 @@ export const commands: Commands = {
         }
     },
 
+    /**
+     * ban Command
+     *     Used for ban the current music.
+     */
     ban: {
         description: '🚫 現在の曲をBAN',
         options: [],
@@ -443,7 +449,7 @@ export const commands: Commands = {
             }
 
             const user = interaction.user;
-            bot.addBanlist(bot.currentMusic, `${user.displayName}(${user.tag})<${user.id}> によりBANされました。`);
+            bot.addBanlist(stripHashString(bot.currentMusic), `${user.displayName}(${user.tag})<${user.id}> によりBANされました。`);
 
             commands.skip.execute(interaction, bot);
         }
