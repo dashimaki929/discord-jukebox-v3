@@ -1,7 +1,9 @@
 # discord-jukebox-v3
 
-Discord Jukebox BOT🤖.  
+Discord Jukebox Bot.  
 Running on Node.js (in TypeScript)
+
+![jukebox-icon](./img/icon.png)
 
 ---
 
@@ -39,7 +41,7 @@ $ npm -v
     > `ytdl-core` 代替ライブラリ
 -   @types/fluent-ffmpeg
 -   @types/node
--   @types/spotify-web-api-node
+-   @types/yt-search
 -   discord.js
     > [discord.js - Documentation](https://discord.js.org/#/docs/discord.js/main/general/welcome)  
     > [discord.js - Guide](https://discordjs.guide/)
@@ -51,16 +53,8 @@ $ npm -v
 -   opusscript
 -   rimraf
     > ファイル削除用ライブラリ（管理者権限削除）
--   spotify-web-api-node
-    > Spotify Web API 実行用ライブラリ
 -   tsx
 -   tweetnacl
 -   typescript
 -   yt-search
     > Youtube 動画検索, プレイリスト取得用ライブラリ
-
-### トラブルシューティング
-
----
-
-## TODO

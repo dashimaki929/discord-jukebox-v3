@@ -58,14 +58,14 @@ export function writeFile(filepath: string, content: string): void {
  * 
  * @param ignoreFileName 
  */
-export async function removeCache(ignoreHash: string = ''): Promise<void> {
+export async function removeCache(ignoreHashList: string[] = []): Promise<void> {
     const cacheDir = './mp3/cache';
 
     const files = readdirSync(cacheDir);
     const musics = files.filter(f => f.endsWith('.mp3'));
 
     for await (const m of musics) {
-        if (m.split('.')[0] === ignoreHash) continue;
+        if (ignoreHashList.find(hash => `${hash}.mp3` === m)) continue;
         
         const filepath = `${cacheDir}/${m}`;
         try {
@@ -196,6 +196,16 @@ export function updatePlayerButton(bot: Bot): void {
             )
         ]
     });
+}
+
+/**
+ * Strip hash string.
+ * 
+ * @param bot 
+ * @param content 
+ */
+export function stripHashString(hash: string): string {
+    return hash.split('@')[0];
 }
 
 /**

@@ -11,7 +11,6 @@ import {
     NoSubscriberBehavior,
     StreamType
 } from "@discordjs/voice";
-import SpotifyWebApi from "spotify-web-api-node";
 import ytdl from "@distube/ytdl-core";
 
 import ffmpeg from 'fluent-ffmpeg';
@@ -22,7 +21,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 import { BANLIST } from "../typedef.js";
 import { DEFAULT_VOLUME, INTERLUDES, URLS } from "../common/constants.js";
-import { formatTime, getVersionInfo, readFile, removeCache, shuffle, updateMessageFromKey, updatePlayerButton, writeFile } from "../common/util.js";
+import { formatTime, getVersionInfo, readFile, removeCache, shuffle, stripHashString, updateMessageFromKey, updatePlayerButton, writeFile } from "../common/util.js";
 
 export class Bot {
     static BANNED_HASH_LIST: BANLIST = JSON.parse(readFile('./config/banlist.json'));
@@ -46,7 +45,6 @@ export class Bot {
     isAutoPause: boolean;
     isTimeSignal: boolean;
 
-    spotifyApi: SpotifyWebApi;
     audioPlayer: AudioPlayer;
 
     constructor(guildId: string) {
@@ -71,12 +69,6 @@ export class Bot {
 
         this.initMusicQueue(true);
 
-        this.spotifyApi = new SpotifyWebApi({
-            clientId: process.env.SPOTIFY_CLIENT_ID,
-            clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-            redirectUri: process.env.SPOTIFY_REDIRECT_URL
-        });
-
         this.audioPlayer = createAudioPlayer({
             behaviors: {
                 noSubscriber: NoSubscriberBehavior.Pause,
@@ -93,12 +85,12 @@ export class Bot {
             clearTimeout(this.timeouts.get('timesignal'));
         });
         this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
-            this.play();
-
             if (this.isTimeSignal) {
                 this.isTimeSignal = false;
+                this.play(`./mp3/cache/${this.currentMusic}.mp3`);
             } else {
                 this.pausedTime = 0;
+                this.play();
             }
 
             clearTimeout(this.timeouts.get('timesignal'));
@@ -118,22 +110,24 @@ export class Bot {
 
         con.subscribe(this.audioPlayer);
 
+
         if (!filepath) {
-            const hash = this.isLoop ? this.currentMusic : this.#getNextMusicHash();
+            const hash = this.isLoop ? stripHashString(this.currentMusic) : this.#getNextMusicHash();
             this.currentMusic = hash;
 
             filepath = await this.download(hash);
+            await this.#updatePlayerInfo(hash);
         }
 
         this.audioResource = createAudioResource(filepath, { inputType: StreamType.WebmOpus, inlineVolume: true });
         this.audioResource.volume?.setVolume(this.volume);
 
-        await this.#updatePlayerInfo(this.currentMusic);
-
         this.audioPlayer.play(this.audioResource);
         if (this.isAutoPause) this.audioPlayer.pause();
 
         updatePlayerButton(this);
+        
+        await removeCache([stripHashString(this.currentMusic), this.currentMusic]);
 
         // pre-download next music.
         while (Object.keys(Bot.BANNED_HASH_LIST).includes(this.musicQueue[0])) {
@@ -141,23 +135,22 @@ export class Bot {
             console.info('[INFO]', 'BANされている楽曲のためスキップします:', `${URLS.YOUTUBE}?v=${hash}`);
             console.info('[INFO]', '理由:', Bot.BANNED_HASH_LIST[hash].reason);
         }
-        this.download(this.musicQueue[0], this.pausedTime);
+
+        if (this.isTimeSignal) {
+            this.download(stripHashString(this.currentMusic), this.pausedTime);
+        } else {
+            this.download(this.isLoop ? stripHashString(this.currentMusic) : this.musicQueue[0]);
+        }
     }
 
     async download(hash: string, startTime: number = 0): Promise<string> {
-        if (this.isTimeSignal && startTime) {
-            await removeCache();
-        } else if (!this.isLoop) {
-            await removeCache(this.currentMusic);
-        }
-
         return new Promise((resolve, reject) => {
             if (!hash) {
                 hash = this.#getNextMusicHash();
             }
 
             const url = `${URLS.YOUTUBE}?v=${hash}`;
-            const filepath = `./mp3/cache/${hash}.mp3`;
+            const filepath = `./mp3/cache/${hash}${startTime ? `@t=${startTime}` : ''}.mp3`;
             if (!existsSync(filepath)) {
                 console.debug('[DEBUG]', 'download:', url);
 
@@ -180,7 +173,7 @@ export class Bot {
                 ffmpeg(stream).audioBitrate(128)
                     .format('mp3')
                     .setStartTime(this.isTimeSignal ? startTime : 0)
-                    .audioFilter('dynaudnorm') // loudnorm vs dynaudnorm ...?
+                    .audioFilter(['dynaudnorm', 'bass=g=5']) // loudnorm vs dynaudnorm ...?
                     .on('end', () => {
                         resolve(filepath);
                     })
@@ -265,8 +258,8 @@ export class Bot {
 
         return setTimeout(async () => {
             this.audioPlayer.pause();
-            this.musicQueue.unshift(this.currentMusic);
-            this.pausedTime += ((this.audioResource?.playbackDuration || 0) / 1000);
+            this.pausedTime += Number(((this.audioResource?.playbackDuration || 0) / 1000).toFixed(2));
+            this.currentMusic = `${stripHashString(this.currentMusic)}@t=${this.pausedTime}`;
             this.isTimeSignal = true;
             this.play('./mp3/timesignal.mp3');
         }, Number(nextTimeSignalDate) - Number(new Date()));
