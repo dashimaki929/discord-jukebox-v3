@@ -215,7 +215,7 @@ export const commands: Commands = {
             const param = interaction.options.get('playlist')?.value! as string || interaction.options.get('url')?.value! as string;
 
             const checksum = '[048AEIMQUYcgkosw]';
-            const exps = ['PL[\w-]{32}', `(O|RDC)LAK5uy_[\\w-]{32}${checksum}`];
+            const exps = ['PL[\\w-]{32}', `(O|RDC)LAK5uy_[\\w-]{32}${checksum}`];
             const hash = param.match(new RegExp(exps.join('|')));
             if (!hash) {
                 notificationReply(interaction, '❌ URLが正しくないか、無効なプレイリストです。');
