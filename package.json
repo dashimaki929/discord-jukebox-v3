@@ -24,12 +24,12 @@
     "tabWidth": 4
   },
   "dependencies": {
-    "@discordjs/voice": "^0.17.0",
+    "@discordjs/voice": "^0.18.0",
     "@distube/ytdl-core": "^4.16.8",
     "@types/fluent-ffmpeg": "^2.1.26",
     "@types/node": "^22.5.5",
     "@types/yt-search": "^2.10.3",
-    "discord.js": "^14.16.2",
+    "discord.js": "^14.18.0",
     "dotenv": "^16.4.5",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",
